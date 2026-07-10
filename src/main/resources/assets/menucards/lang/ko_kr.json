@@ -1,0 +1,16 @@
+{
+    "key.categories.menucards": "Sunlit Valley 메뉴",
+    "key.menucards.open": "메뉴 열기",
+
+    "menucards.lore.town_home": "마을 홈으로 이동합니다",
+    "menucards.lore.spawn": "스폰으로 이동합니다",
+    "menucards.lore.sell": "배송 상자를 오픈합니다",
+    "menucards.lore.help": "운영자를 호출합니다",
+    "menucards.lore.skull_cave": "해골 광산으로 이동합니다",
+
+    "menucards.action.town_home": "마을 홈으로 이동합니다 (준비 중)",
+    "menucards.action.spawn": "스폰으로 이동합니다 (준비 중)",
+    "menucards.action.sell": "배송 상자를 오픈합니다 (준비 중)",
+    "menucards.action.help": "운영자를 호출합니다 (준비 중)",
+    "menucards.action.skull_cave": "해골 광산으로 이동합니다 (준비 중)"
+}

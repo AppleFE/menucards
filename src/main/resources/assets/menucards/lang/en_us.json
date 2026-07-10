@@ -1,0 +1,16 @@
+{
+    "key.categories.menucards": "Sunlit Valley Menu",
+    "key.menucards.open": "Open Menu",
+
+    "menucards.lore.town_home": "Teleport to Town Home",
+    "menucards.lore.spawn": "Teleport to Spawn",
+    "menucards.lore.sell": "Open Shipping Box",
+    "menucards.lore.help": "Call Admin",
+    "menucards.lore.skull_cave": "Teleport to Skull Mine",
+
+    "menucards.action.town_home": "Teleporting to Town Home (coming soon)",
+    "menucards.action.spawn": "Teleporting to Spawn (coming soon)",
+    "menucards.action.sell": "Opening Shipping Box (coming soon)",
+    "menucards.action.help": "Calling Admin (coming soon)",
+    "menucards.action.skull_cave": "Teleporting to Skull Mine (coming soon)"
+}
