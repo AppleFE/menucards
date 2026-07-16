@@ -5,6 +5,8 @@ import com.sunlitvalley.menucards.MenuCardsMod;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.settings.KeyConflictContext;
+import net.minecraftforge.client.settings.KeyModifier;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
@@ -14,8 +16,9 @@ public class ClientModEvents {
 
     public static final KeyMapping KEY_OPEN_MENU = new KeyMapping(
         "key.menucards.open",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_G,
+        KeyConflictContext.IN_GAME,
+        KeyModifier.SHIFT,
+        InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_E),
         "key.categories.menucards"
     );
 
