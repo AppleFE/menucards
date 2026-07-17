@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseUtc": "2026-07-17T15:05:04Z",
+  "releaseUtc": "2026-07-17T16:11:24.754267Z",
   "target": {
     "minecraft": "1.20.1",
     "forge": "47.4.0",
@@ -13,89 +13,75 @@
   "artifacts": {
     "jar": {
       "source": "build/libs/menucards-1.0.0.jar",
+      "sourceSha256": "a3fa916c83e89cdd08106bf46f93763535715c3fe0e5b5a5fc043e87fd9ebb82",
       "deployedPath": "mods/menucards-1.0.0.jar",
-      "sha256": "df0767d137c74a22cba761538f171f02a1dae4bb01aab3aa2c921050f7fac7b9",
-      "entryCount": 89,
-      "forbiddenEntries": [],
-      "testFailpointPropertySymbolAbsent": true
+      "deployedSha256": "c2ccf7b2b15a939cbf64664402361818a536f55ef4a8a5a24091c1d35e33072e",
+      "entryCount": 93,
+      "kubeJsPlugin": "com.sunlitvalley.menucards.integration.shipping.MenuCardsKubeJSPlugin"
     },
     "policyScript": {
       "source": "deploy/kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
       "deployedPath": "kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
-      "sha256": "2fdc292c6c6331e6d8ceb6159b90152b7f3a94e00e1f9230c055cd1ab3d6537d"
+      "sha256": "734c03f9b3edefe7763946ce1d9e649d4a5dadf59e0112d1ccbd7f197376e0b0"
     },
     "schedulerScript": {
       "source": "deploy/kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js",
       "deployedPath": "kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js",
-      "sha256": "44e72d386a68e26502ab1eca43c020c460386ab75f0bbfb433d53e5410602bb4"
+      "sha256": "1bcd893b5de54385e301aa6be2e10251bb7617b09fb9bc490975ef9aab7aed9c"
     }
   },
   "deployment": {
     "status": "staged-for-next-restart",
-    "backupPath": "backups/menucards/20260717T150504Z",
-    "priorDeploymentBackupPath": "backups/menucards/20260717T141448Z",
+    "backupPaths": [
+      "backups/menucards/20260717T155526Z",
+      "backups/menucards/20260717T160120Z"
+    ],
     "restartRequired": true,
-    "serverRestarted": false,
-    "previousHashes": {
-      "mods/menucards-1.0.0.jar": "8277475e4b11645e5634b2d52bce5f18de1c02c6f7ec3c80036ed09009203bba"
-    },
+    "serverRestartedWithFinalPlugin": false,
     "liveServer": {
-      "pid": 25296,
+      "pid": 12800,
       "process": "java.exe",
-      "remainedRunningDuringStaging": true,
-      "postStageLogActivityObserved": true
-    }
+      "remainedRunningDuringFinalStaging": true
+    },
+    "runtimeActivationEvidence": "pending controlled restart; current process loaded the prior jar before the KubeJS plugin was staged"
   },
   "contracts": {
     "defaultKey": "SHIFT+E",
     "author": "AppleFE",
-    "spawnAuthority": "online PlayerList.isOp",
-    "teleportCooldown": "none for spawn, town home, and skull cavern; shipping keeps only its independent duplicate-open guard",
+    "teleportCooldown": "none for spawn, town home, and skull cavern",
     "shippingSchemaVersion": 3,
-    "fingerprintEncodingVersion": 2,
-    "shippingAbi": "two private zero-based 27-slot sides with $extractStack and no $remove",
+    "fingerprintEncodingVersion": 3,
+    "shippingAbi": "one private persistent 54-slot GENERIC_9x6 smart shipping chest; all slots sellable",
+    "kubeJsBridgeExposure": "server scripts only via KubeJSPlugin class filter",
     "terminalQuarantine": "force-saved and first reason idempotent",
-    "economyIntent": "immutable persisted debt and bank CAS terms",
+    "economyIntent": "immutable persisted debt/bank CAS with mutate-then-throw compensation",
     "skullDestination": "society:skull_cavern origin column highest safe block"
   },
   "verification": {
     "unit": {
-      "tests": 19,
+      "tests": 20,
       "failures": 0,
       "errors": 0
     },
     "gameTest": {
-      "tests": 21,
+      "tests": 22,
       "status": "passed"
     },
     "nodeSyntax": "passed",
     "nodePolicyQa": "passed",
-    "rhinoSyntax": "passed",
-    "rhinoRuntime": "passed",
     "gradleBuild": "passed",
-    "gitDiffCheck": "passed"
+    "gitDiffCheck": "passed",
+    "runtimeActivation": "pending restart"
   },
   "reviewReceipts": {
-    "shippingArchitect": "agent://94-ArchShippingTerminal",
-    "packageArchitect": "agent://88-ArchPackageRelease",
-    "actionsArchitect": "agent://87-ArchActionsRelease",
-    "menuArchitect": "agent://86-ArchMenuRelease",
-    "shippingQa": "agent://91-QaShippingEvidenceFinal",
-    "actionsQa": "agent://92-QaActionsEvidenceFinal",
-    "status": "CLEAR_APPROVE_PASSED"
-  },
-  "runtimeDependencies": {
-    "mods/society-chunkyclaim-1.0.0.jar": "f90e0e69bd9a2c4aeccc8e7500d5bd32de5d12e22ae71088e066adcdce7ed6ba",
-    "mods/ShippingBin-forge-1.20.1-4.jar": "b44b2d73840a1e94ef6e75763548f473903db2294f725dabb5562a5c039b2444"
-  },
-  "unchangedGlobalHelpers": {
-    "kubejs/startup_scripts/globalRegistry.js": "19434067ded915094818046f3c9100d2cd53868f91f3b6a60736af7416e8fa59",
-    "kubejs/startup_scripts/globalBlockEntityHandlers.js": "9b169ddff1332a58074f07254d0d35fdc2fcc20f1c8866ff4c4a342a42e4b679",
-    "kubejs/startup_scripts/globalShippingBinHandlers.js": "89d3e854073ffe38dfac75657363ca4f0838bc40a3510ccc66a69bdb81fab26e"
+    "shippingArchitect": "agent://104-ArchSmartBinRelease",
+    "shippingQa": "agent://105-ExecSmartBinRelease",
+    "kubeJsQa": "agent://107-ExecKubeJsBridge",
+    "status": "SOURCE_CLEAR_RUNTIME_ACTIVATION_PENDING"
   },
   "incidentNotes": [
-    "The earlier production parser failure caused by unsupported destructured-arrow syntax was corrected.",
-    "Production artifacts were replaced atomically per file while the existing server process remained running; activation requires the next controlled restart.",
-    "The follow-up removes the shared 100-tick teleport cooldown that intermittently discarded spawn, town-home, and skull-cavern menu actions."
+    "The menu now opens the real smart shipping bin as a vanilla six-row chest instead of ShippingBin v4 Inputs/Profits UI.",
+    "All 54 private persisted slots participate in sale planning and exactly-once compensation.",
+    "A live restart exposed KubeJS class-filter rejection; the deployed jar now packages a server-only KubeJSPlugin allowlist. Activation and log confirmation require the next controlled restart."
   ]
 }

@@ -6,6 +6,7 @@ import com.sunlitvalley.menucards.inventory.InventorySide;
 import com.sunlitvalley.menucards.inventory.MenuCardsCommonHandler;
 import com.sunlitvalley.menucards.integration.shipping.CanonicalInputFingerprint;
 import com.sunlitvalley.menucards.integration.shipping.VirtualSalePlan;
+import com.sunlitvalley.menucards.integration.shipping.VirtualShippingBridge;
 import com.sunlitvalley.menucards.server.SkullCavernDestinationResolver;
 import com.sunlitvalley.menucards.server.TeleportSafety;
 import java.util.Arrays;
@@ -34,9 +35,9 @@ public final class MenuCardsGameTests {
     public static void shippingAbiMatchesPinnedDependency(GameTestHelper helper) {
         helper.assertTrue(CommonHandler.SLOTS == 27, "Shipping Bin v4 must expose 27 slots per side");
         helper.assertTrue(VirtualShippingSavedData.SLOTS == CommonHandler.SLOTS,
-                "Virtual storage must match the pinned Shipping Bin side size");
-        helper.assertTrue(CanonicalInputFingerprint.SLOT_COUNT == VirtualShippingSavedData.SLOTS,
-                "Fingerprint slot count must match virtual input storage");
+                "Persisted v3 side arrays must match the pinned Shipping Bin side size");
+        helper.assertTrue(CanonicalInputFingerprint.SLOT_COUNT == VirtualShippingSavedData.SLOTS * 2,
+                "Planning fingerprints must cover both persisted storage halves");
         helper.succeed();
     }
 
@@ -69,6 +70,14 @@ public final class MenuCardsGameTests {
                         CanonicalInputFingerprint.sha256(firstSlots),
                         CanonicalInputFingerprint.sha256(secondSlots)),
                 "Stack count changes must change the canonical fingerprint");
+
+        second.setCount(2);
+        secondSlots[3] = first.copy();
+        secondSlots[VirtualShippingSavedData.SLOTS] = new ItemStack(Items.APPLE, 1);
+        helper.assertTrue(!Arrays.equals(
+                        CanonicalInputFingerprint.sha256(firstSlots),
+                        CanonicalInputFingerprint.sha256(secondSlots)),
+                "A change in the persisted output half must change the unified fingerprint");
 
         ItemStack untagged = new ItemStack(Items.STONE, 2);
         ItemStack taggedEmpty = new ItemStack(Items.STONE, 2);
@@ -528,6 +537,62 @@ public final class MenuCardsGameTests {
         }
     }
     @GameTest(templateNamespace = MenuCardsMod.MOD_ID, template = "empty", timeoutTicks = 20)
+    public static void completionSaveRollbackRestoresApplyingState(GameTestHelper helper) {
+        VirtualShippingSavedData data = new VirtualShippingSavedData();
+        UUID owner = UUID.randomUUID();
+        data.enroll(owner, 0L);
+        helper.assertTrue(data.acquireLease(owner, 73), "Completion rollback fixture must acquire its menu lease");
+        data.setStack(owner, InventorySide.INPUT, 0, new ItemStack(Items.STONE, 2));
+        data.releaseLease(owner, 73);
+        UUID token = UUID.randomUUID();
+        ItemStack[] snapshot = emptySlots();
+        snapshot[0] = new ItemStack(Items.STONE, 2);
+        try {
+            configurePlanningState(data, owner, token, snapshot);
+        } catch (ReflectiveOperationException exception) {
+            helper.fail("Completion rollback fixture must enter PLANNING: " + exception.getMessage());
+            return;
+        }
+        VirtualSalePlan plan;
+        try {
+            plan = VirtualSalePlan.parse(
+                    "{\"version\":2,\"removals\":[{\"slot\":0,\"count\":1}],"
+                            + "\"outputs\":[],\"receipts\":[],\"economy\":" + validEconomyJson()
+                            + ",\"steps\":[\"OUTPUT\",\"DEBT\",\"BANK\"]}",
+                    snapshot);
+        } catch (VirtualSalePlan.PlanValidationException exception) {
+            helper.fail("Completion rollback fixture plan must be valid: " + exception.reason());
+            return;
+        }
+        var submit = data.submitPlan(token, owner,
+                data.generation(owner, InventorySide.INPUT) + data.generation(owner, InventorySide.OUTPUT),
+                CanonicalInputFingerprint.sha256(snapshot), plan);
+        helper.assertTrue(submit.succeeded(),
+                "Completion rollback fixture must accept its plan: " + submit.reason());
+        helper.assertTrue(data.beginApplying(token, owner).succeeded(),
+                "Completion rollback fixture must enter APPLYING");
+        helper.assertTrue(data.applyPlannedOutput(token, owner).succeeded(),
+                "Completion rollback fixture must apply output");
+        helper.assertTrue(data.reportPolicyStep(token, owner, VirtualShippingBridge.PolicyStep.OUTPUT)
+                        .succeeded()
+                        && data.reportPolicyStep(token, owner, VirtualShippingBridge.PolicyStep.DEBT)
+                        .succeeded()
+                        && data.reportPolicyStep(token, owner, VirtualShippingBridge.PolicyStep.BANK)
+                        .succeeded(),
+                "Completion rollback fixture must report every policy step");
+
+        CompoundTag applying = data.save(new CompoundTag());
+        helper.assertTrue(data.removeInputAndComplete(token, owner).succeeded(),
+                "Completion fixture must remove input before its simulated save failure");
+        helper.assertTrue(data.getStack(owner, InventorySide.INPUT, 0).getCount() == 1,
+                "Completion must mutate inventory before durable-save compensation");
+        data.rollbackCompletion(token, owner);
+
+        helper.assertTrue(applying.equals(data.save(new CompoundTag())),
+                "Completion save failure must restore the exact APPLYING record and inventory");
+        helper.succeed();
+    }
+    @GameTest(templateNamespace = MenuCardsMod.MOD_ID, template = "empty", timeoutTicks = 20)
     public static void repeatedQuarantinePreservesFirstTerminalReason(GameTestHelper helper) {
         VirtualShippingSavedData source = new VirtualShippingSavedData();
         UUID owner = UUID.randomUUID();
@@ -547,6 +612,32 @@ public final class MenuCardsGameTests {
                         && loaded.status(owner).reason().equals("FIRST_TERMINAL"),
                 "Repeated quarantine must preserve the first terminal reason");
         helper.succeed();
+    }
+    private static void configurePlanningState(VirtualShippingSavedData data, UUID owner, UUID token,
+                                               ItemStack[] snapshot) throws ReflectiveOperationException {
+        var recordsField = VirtualShippingSavedData.class.getDeclaredField("records");
+        recordsField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        var records = (java.util.Map<UUID, Object>) recordsField.get(data);
+        Object record = records.get(owner);
+        if (record == null) {
+            throw new IllegalStateException("Missing fixture record");
+        }
+        setRecordField(record, "state", VirtualShippingSavedData.State.PLANNING);
+        setRecordField(record, "token", token);
+        setRecordField(record, "inputGenerationAtPlan",
+                data.generation(owner, InventorySide.INPUT) + data.generation(owner, InventorySide.OUTPUT));
+        setRecordField(record, "inputSnapshot", Arrays.stream(snapshot)
+                .map(stack -> stack.isEmpty() ? ItemStack.EMPTY : stack.copy())
+                .toArray(ItemStack[]::new));
+        setRecordField(record, "snapshotDigest", CanonicalInputFingerprint.sha256(snapshot));
+    }
+
+    private static void setRecordField(Object record, String name, Object value)
+            throws ReflectiveOperationException {
+        var field = record.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(record, value);
     }
     private static void configureActiveQuarantine(CompoundTag record, int removalCount) {
         ItemStack[] snapshot = emptySlots();

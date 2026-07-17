@@ -24,8 +24,7 @@ function menuCardsUtf8ByteLength(value) {
 
 global.planVirtualShipping = (lease, server) => {
   const input = lease.input();
-  const output = lease.output();
-  if (input.length !== 27 || output.length !== 27) throw new Error("LEASE_SLOT_ABI");
+  if (input.length !== 54) throw new Error("LEASE_SLOT_ABI");
   const requireAmount = (value, reason) => {
     if (!Number.isSafeInteger(value) || value < 0) throw new Error(reason);
     return value;
@@ -72,7 +71,7 @@ global.planVirtualShipping = (lease, server) => {
         : undefined;
   const stackHasTag = (stack, tag) => Item.of(stack).hasTag(tag);
 
-  for (let slot = 0; slot < 27; slot++) {
+  for (let slot = 0; slot < 54; slot++) {
     const stack = input[slot];
     const item = stackItem(stack);
     const itemId = String(Item.of(stack).id);

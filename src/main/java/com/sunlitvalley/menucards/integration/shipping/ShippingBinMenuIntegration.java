@@ -25,7 +25,7 @@ public final class ShippingBinMenuIntegration {
         release(caller);
         if (data.hasLease(authenticatedOwner)) return false;
         NetworkHooks.openScreen(caller, new MenuProvider() {
-            @Override public Component getDisplayName() { return Component.translatable("container.shippingbin.shipping_bin"); }
+            @Override public Component getDisplayName() { return Component.translatable("block.shippingbin.smart_shipping_bin"); }
             @Override public AbstractContainerMenu createMenu(int containerId, Inventory inventory, net.minecraft.world.entity.player.Player player) {
                 return new MenuCardsShippingBinMenu(containerId, inventory, data, authenticatedOwner);
             }

@@ -10,11 +10,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class VirtualSalePlanTest {
     @Test
-    void acceptsAFullRemovalFromTheTwentySeventhInputSlot() throws Exception {
+    void acceptsAFullRemovalFromTheTwentySeventhSmartBinSlot() throws Exception {
         VirtualSalePlan plan = parse(planJson(26, 4), 4);
 
         assertEquals(1, plan.removals().size());
         assertEquals(new VirtualSalePlan.Removal(26, 4), plan.removals().get(0));
+    }
+
+    @Test
+    void acceptsAFullRemovalFromTheFiftyFourthSmartBinSlot() throws Exception {
+        VirtualSalePlan plan = parse(planJson(53, 4), 4);
+
+        assertEquals(1, plan.removals().size());
+        assertEquals(new VirtualSalePlan.Removal(53, 4), plan.removals().get(0));
     }
 
     @Test
@@ -47,8 +55,8 @@ class VirtualSalePlanTest {
     }
 
     @Test
-    void rejectsRemovalBeyondTheTwentySevenSlotSnapshot() {
-        assertInvalid(planJson(27, 1), 1, "REMOVAL_SLOT");
+    void rejectsRemovalBeyondTheFiftyFourSlotSnapshot() {
+        assertInvalid(planJson(54, 1), 1, "REMOVAL_SLOT");
     }
 
     @Test
@@ -165,8 +173,10 @@ class VirtualSalePlanTest {
             throws VirtualSalePlan.PlanValidationException {
         int[] counts = new int[CanonicalInputFingerprint.SLOT_COUNT];
         int[] maxStackSizes = new int[CanonicalInputFingerprint.SLOT_COUNT];
-        counts[counts.length - 1] = finalSlotCount;
-        maxStackSizes[maxStackSizes.length - 1] = 64;
+        for (int slot = 0; slot < counts.length; slot++) {
+            counts[slot] = finalSlotCount;
+            maxStackSizes[slot] = 64;
+        }
         return VirtualSalePlan.parse(json, counts, maxStackSizes);
     }
 

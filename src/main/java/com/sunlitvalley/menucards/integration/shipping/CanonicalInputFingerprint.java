@@ -15,10 +15,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Versioned, JVM-only canonical encoding of the virtual input snapshot. */
+/** Versioned, JVM-only canonical encoding of the unified virtual shipping snapshot. */
 public final class CanonicalInputFingerprint {
-    public static final int SLOT_COUNT = 27;
-    private static final byte VERSION = 2;
+    public static final int SLOT_COUNT = 54;
+    private static final byte VERSION = 3;
     private static final byte[] PREFIX = "MENUCARDS-INPUT\0".getBytes(StandardCharsets.US_ASCII);
 
     private CanonicalInputFingerprint() { }

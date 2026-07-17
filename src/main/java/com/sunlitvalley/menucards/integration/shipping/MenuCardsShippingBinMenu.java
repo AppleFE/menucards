@@ -2,19 +2,17 @@ package com.sunlitvalley.menucards.integration.shipping;
 
 import com.sunlitvalley.menucards.data.VirtualShippingSavedData;
 import com.sunlitvalley.menucards.inventory.InventorySide;
-import com.sunlitvalley.menucards.inventory.MenuCardsCommonHandler;
 import java.util.UUID;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import tfar.shippingbin.inventory.CommonHandler;
-import tfar.shippingbin.menu.ShippingBinMenu;
 
-/** The Shipping Bin v4 screen backed solely by a Menu Cards owner record. */
-public final class MenuCardsShippingBinMenu extends ShippingBinMenu<CommonHandler> {
+/** A vanilla six-row chest menu backed solely by a Menu Cards owner record. */
+public final class MenuCardsShippingBinMenu extends ChestMenu {
     private final VirtualShippingSavedData data;
     private final UUID owner;
     private final int leaseContainerId;
@@ -25,15 +23,8 @@ public final class MenuCardsShippingBinMenu extends ShippingBinMenu<CommonHandle
     private boolean integrityFailure;
 
     public MenuCardsShippingBinMenu(int containerId, Inventory inventory, VirtualShippingSavedData data, UUID owner) {
-        this(tfar.shippingbin.init.ModMenuTypes.SHIPPING_BIN, containerId, inventory, data, owner,
-                new MenuCardsCommonHandler(data, owner, InventorySide.INPUT),
-                new MenuCardsCommonHandler(data, owner, InventorySide.OUTPUT));
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private MenuCardsShippingBinMenu(MenuType type, int containerId, Inventory inventory,
-            VirtualShippingSavedData data, UUID owner, CommonHandler input, CommonHandler output) {
-        super(type, containerId, inventory, input, output);
+        super(MenuType.GENERIC_9x6, containerId, inventory,
+                new MenuCardsSmartShippingContainer(data, owner), 6);
         this.data = data;
         this.owner = owner;
         this.leaseContainerId = containerId;
@@ -53,9 +44,9 @@ public final class MenuCardsShippingBinMenu extends ShippingBinMenu<CommonHandle
     }
 
     /**
-     * Shipping Bin v4 mutates the stack returned by a target slot during compatible-stack merges
-     * and its tab slot has a no-op {@code setChanged}. Commit replacement copies through
-     * {@link Slot#set(ItemStack)} so every mutation reaches MenuCardsCommonHandler.
+     * The standard move helper mutates a target slot's returned stack before calling setChanged.
+     * This menu's persisted container returns defensive copies, so replacement copies must be
+     * committed through Slot#set instead.
      */
     @Override
     protected boolean moveItemStackTo(ItemStack offered, int startIndex, int endIndex, boolean reverseDirection) {
@@ -215,6 +206,7 @@ public final class MenuCardsShippingBinMenu extends ShippingBinMenu<CommonHandle
             primaryFailure.addSuppressed(integrityException);
         }
     }
+
     private void cleanupLease() {
         if (leaseCleanupComplete) return;
 

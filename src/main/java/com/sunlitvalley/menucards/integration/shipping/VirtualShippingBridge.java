@@ -60,9 +60,19 @@ public final class VirtualShippingBridge {
     }
     /** Saves APPLYING before policy code can create any external proceeds. */
     public BridgeResult beginApplying(LeaseView lease) { requireServerThread(); if (!validLease(lease)) return BridgeResult.requeue("LEASE_INVALID"); return storage.beginApplying(lease.token(), lease.playerId()); }
-    public BridgeResult applyPlannedOutput(LeaseView lease) { requireServerThread(); if (!validLease(lease)) return BridgeResult.quarantine("LEASE_INVALID"); try { return storage.applyPlannedOutput(lease.token(), lease.playerId()); } catch (RuntimeException exception) { return quarantine(lease, "OUTPUT_EXCEPTION"); } }
-    public BridgeResult reportPolicyStep(LeaseView lease, String step) { requireServerThread(); if (!validLease(lease)) return BridgeResult.quarantine("LEASE_INVALID"); try { return storage.reportPolicyStep(lease.token(), lease.playerId(), PolicyStep.valueOf(step)); } catch (IllegalArgumentException exception) { return quarantine(lease, "POLICY_STEP"); } catch (RuntimeException exception) { return quarantine(lease, "POLICY_STEP_EXCEPTION"); } }
-    public BridgeResult removeInputAndComplete(LeaseView lease) { requireServerThread(); if (!validLease(lease)) return BridgeResult.quarantine("LEASE_INVALID"); try { return storage.removeInputAndComplete(lease.token(), lease.playerId()); } catch (RuntimeException exception) { return quarantine(lease, "INPUT_REMOVAL_EXCEPTION"); } }
+    public BridgeResult applyPlannedOutput(LeaseView lease) { requireServerThread(); if (!validLease(lease)) return BridgeResult.quarantine("LEASE_INVALID"); return storage.applyPlannedOutput(lease.token(), lease.playerId()); }
+    public BridgeResult reportPolicyStep(LeaseView lease, String step) {
+        requireServerThread();
+        if (!validLease(lease)) return BridgeResult.quarantine("LEASE_INVALID");
+        final PolicyStep policyStep;
+        try {
+            policyStep = PolicyStep.valueOf(step);
+        } catch (IllegalArgumentException exception) {
+            return quarantine(lease, "POLICY_STEP");
+        }
+        return storage.reportPolicyStep(lease.token(), lease.playerId(), policyStep);
+    }
+    public BridgeResult removeInputAndComplete(LeaseView lease) { requireServerThread(); if (!validLease(lease)) return BridgeResult.quarantine("LEASE_INVALID"); return storage.removeInputAndComplete(lease.token(), lease.playerId()); }
     public BridgeResult quarantine(LeaseView lease, String reason) { requireServerThread(); if (!validLease(lease)) return BridgeResult.quarantine("LEASE_INVALID"); return storage.quarantine(lease.token(), lease.playerId(), boundedReason(reason) ? reason : "QUARANTINE_REASON"); }
     public BridgeResult.PlanningAbortCode abortPlanning(UUID token, String reason) { requireServerThread(); Objects.requireNonNull(token, "token"); return storage.abortPlanning(token, boundedReason(reason) ? reason : "ABORT_REASON"); }
     public void resetRuntimeState() {
@@ -106,7 +116,7 @@ public final class VirtualShippingBridge {
         return completed;
     }
 
-    private boolean validLease(LeaseView lease) { return lease != null && lease.player() != null && lease.player().getUUID().equals(lease.playerId()) && lease.input().length == CanonicalInputFingerprint.SLOT_COUNT && lease.output().length == CanonicalInputFingerprint.SLOT_COUNT; }
+    private boolean validLease(LeaseView lease) { return lease != null && lease.player() != null && lease.player().getUUID().equals(lease.playerId()) && lease.input().length == CanonicalInputFingerprint.SLOT_COUNT; }
     private static boolean boundedReason(String reason) { return reason != null && reason.length() <= VirtualSalePlan.MAX_STRING && reason.getBytes(StandardCharsets.UTF_8).length <= VirtualSalePlan.MAX_STRING; }
     private void bindServerThread() { Thread current = Thread.currentThread(); if (serverThread == null) serverThread = current; else if (serverThread != current) throw new IllegalStateException("SERVER_THREAD_REQUIRED"); }
     private void requireServerThread() { if (serverThread == null || serverThread != Thread.currentThread()) throw new IllegalStateException("SERVER_THREAD_REQUIRED"); }
@@ -154,11 +164,29 @@ public final class VirtualShippingBridge {
             return result;
         }
 
-        @Override public BridgeResult applyPlannedOutput(UUID token, UUID owner) { return persistTerminal(owner, data().applyPlannedOutput(token, owner)); }
+        @Override public BridgeResult applyPlannedOutput(UUID token, UUID owner) { return persistMutation(owner, data().applyPlannedOutput(token, owner)); }
         @Override public @Nullable VirtualSalePlan.EconomyTerms acceptedEconomyTerms(UUID token, UUID owner) { return data().acceptedEconomyTerms(token, owner); }
-        @Override public BridgeResult reportPolicyStep(UUID token, UUID owner, PolicyStep step) { return persistTerminal(owner, data().reportPolicyStep(token, owner, step)); }
-        @Override public BridgeResult removeInputAndComplete(UUID token, UUID owner) { return persistTerminal(owner, data().removeInputAndComplete(token, owner)); }
-        @Override public BridgeResult quarantine(UUID token, UUID owner, String reason) { return persistTerminal(owner, data().quarantine(token, owner, reason)); }
+        @Override public BridgeResult reportPolicyStep(UUID token, UUID owner, PolicyStep step) { return persistMutation(owner, data().reportPolicyStep(token, owner, step)); }
+        @Override
+        public BridgeResult removeInputAndComplete(UUID token, UUID owner) {
+            VirtualShippingSavedData savedData = data();
+            BridgeResult result = savedData.removeInputAndComplete(token, owner);
+            if (!result.succeeded()) return persistTerminal(owner, result);
+            MinecraftServer boundServer = server;
+            if (boundServer == null) {
+                savedData.rollbackCompletion(token, owner);
+                throw new IllegalStateException("POLL_REQUIRED");
+            }
+            try {
+                saveDurably(boundServer, savedData);
+                savedData.finishCompletion(token, owner);
+                return result;
+            } catch (RuntimeException exception) {
+                savedData.rollbackCompletion(token, owner);
+                throw exception;
+            }
+        }
+        @Override public BridgeResult quarantine(UUID token, UUID owner, String reason) { return persistMutation(owner, data().quarantine(token, owner, reason)); }
 
         private BridgeResult persistTerminal(UUID owner, BridgeResult result) {
             if (result.code() != BridgeResult.Code.AMBIGUOUS_QUARANTINE) return result;
@@ -171,6 +199,16 @@ public final class VirtualShippingBridge {
             if (boundServer == null) throw new IllegalStateException("POLL_REQUIRED");
             saveDurably(boundServer, savedData);
             return result;
+        }
+        /** Persists every committed policy-state mutation before the next external policy step. */
+        private BridgeResult persistMutation(UUID owner, BridgeResult result) {
+            if (result.succeeded()) {
+                MinecraftServer boundServer = server;
+                if (boundServer == null) throw new IllegalStateException("POLL_REQUIRED");
+                saveDurably(boundServer, data());
+                return result;
+            }
+            return persistTerminal(owner, result);
         }
         @Override
         public BridgeResult.PlanningAbortCode abortPlanning(UUID token, String reason) {

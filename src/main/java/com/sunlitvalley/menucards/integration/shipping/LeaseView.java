@@ -15,16 +15,14 @@ public final class LeaseView {
     private final ServerPlayer player;
     private final long inputGeneration;
     private final ItemStack[] input;
-    private final ItemStack[] output;
 
-    public LeaseView(UUID token, ServerPlayer player, long inputGeneration, ItemStack[] input, ItemStack[] output) {
+    public LeaseView(UUID token, ServerPlayer player, long inputGeneration, ItemStack[] input) {
         this.token = Objects.requireNonNull(token, "token");
         this.player = Objects.requireNonNull(player, "player");
         this.playerId = player.getUUID();
         this.inputGeneration = inputGeneration;
         this.input = copySlots(input);
-        this.output = copySlots(output);
-        if (this.input.length != SLOTS || this.output.length != SLOTS) throw new IllegalArgumentException("SLOT_COUNT");
+        if (this.input.length != SLOTS) throw new IllegalArgumentException("SLOT_COUNT");
     }
 
     public UUID token() { return token; }
@@ -32,7 +30,6 @@ public final class LeaseView {
     public ServerPlayer player() { return player; }
     public long inputGeneration() { return inputGeneration; }
     public ItemStack[] input() { return copySlots(input); }
-    public ItemStack[] output() { return copySlots(output); }
 
     private static ItemStack[] copySlots(ItemStack[] source) {
         Objects.requireNonNull(source, "source");

@@ -25,11 +25,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.saveddata.SavedData;
 
-/** Private, UUID-addressed 27-input/27-output shipping store and durable sale state machine. */
+/** Private, UUID-addressed 54-slot shipping store and durable sale state machine. */
 public final class VirtualShippingSavedData extends SavedData {
     public static final String DATA_ID = "menucards_virtual_shipping";
     public static final int DATA_VERSION = 3;
-    public static final int SLOTS = CanonicalInputFingerprint.SLOT_COUNT;
+    /** Persisted side-array capacity; v3 retains separate Input and Output arrays. */
+    public static final int SLOTS = 27;
+    public static final int FLAT_SLOTS = CanonicalInputFingerprint.SLOT_COUNT;
     public static final long SALE_INTERVAL = 6000L;
     private static final Set<String> ROOT_KEYS = Set.of(
             "DataVersion", "Records", "QuarantinedRawRecords");
@@ -211,8 +213,8 @@ public final class VirtualShippingSavedData extends SavedData {
         Record due = records.values().stream().filter(r -> r.state == State.IDLE && r.leaseContainer == null && r.nextSaleGameTime <= now && server.getPlayerList().getPlayer(r.owner) != null).min(Comparator.comparingLong((Record r) -> r.nextSaleGameTime).thenComparing(r -> r.owner)).orElse(null);
         if (due == null) return null;
         ServerPlayer player = server.getPlayerList().getPlayer(due.owner);
-        due.state = State.PLANNING; due.token = UUID.randomUUID(); due.inputGenerationAtPlan = due.inputGeneration; due.inputSnapshot = copySlots(due.input); due.snapshotDigest = CanonicalInputFingerprint.sha256(due.inputSnapshot); due.plan = null; due.policyMask = 0; due.outputApplied = false; due.reason = null; due.lastObservedGameTime = now; setDirty();
-        return new LeaseView(due.token, player, due.inputGeneration, due.input, due.output);
+        due.state = State.PLANNING; due.token = UUID.randomUUID(); due.inputGenerationAtPlan = combinedGeneration(due); due.inputSnapshot = flatSlots(due); due.snapshotDigest = CanonicalInputFingerprint.sha256(due.inputSnapshot); due.plan = null; due.policyMask = 0; due.outputApplied = false; due.reason = null; due.lastObservedGameTime = now; setDirty();
+        return new LeaseView(due.token, player, due.inputGenerationAtPlan, due.inputSnapshot);
     }
     public synchronized BridgeResult submitPlan(UUID token, UUID owner, long generation, byte[] fingerprint, VirtualSalePlan plan) {
         Record r = recordFor(token, owner, State.PLANNING);
@@ -224,7 +226,7 @@ public final class VirtualShippingSavedData extends SavedData {
         } catch (VirtualSalePlan.PlanValidationException exception) {
             return BridgeResult.requeue(exception.reason());
         }
-        if (!canInsertAll(r.output, plan)) return BridgeResult.requeue("OUTPUT_CAPACITY");
+        if (!canInsertAll(flatSlots(r), plan)) return BridgeResult.requeue("OUTPUT_CAPACITY");
         r.plan = plan; setDirty(); return BridgeResult.success();
     }
     public synchronized @Nullable VirtualSalePlan.EconomyTerms acceptedEconomyTerms(
@@ -251,20 +253,10 @@ public final class VirtualShippingSavedData extends SavedData {
         Record r = recordFor(token, owner, State.APPLYING);
         if (r == null || r.plan == null) return BridgeResult.quarantine("STALE_TOKEN");
         if (r.outputApplied) return BridgeResult.success();
-        if (!canInsertAll(r.output, r.plan)) return quarantineRecord(r, "OUTPUT_CAPACITY_CHANGED");
         try {
-            ItemStack[] staged = copySlots(r.output);
-            for (VirtualSalePlan.StackEntry entry : r.plan.outputs()) {
-                if (!insertStack(staged, r.plan.stack(entry))) {
-                    return quarantineRecord(r, "OUTPUT_CAPACITY_CHANGED");
-                }
+            if (!snapshotCurrent(r) || !canInsertAll(flatSlots(r), r.plan)) {
+                return quarantineRecord(r, "OUTPUT_CAPACITY_CHANGED");
             }
-            for (VirtualSalePlan.StackEntry entry : r.plan.receipts()) {
-                if (!insertStack(staged, r.plan.stack(entry))) {
-                    return quarantineRecord(r, "OUTPUT_CAPACITY_CHANGED");
-                }
-            }
-            commitSlots(r, InventorySide.OUTPUT, staged);
             r.outputApplied = true;
             setDirty();
             return BridgeResult.success();
@@ -294,17 +286,31 @@ public final class VirtualShippingSavedData extends SavedData {
         if (r == null || r.plan == null) return BridgeResult.quarantine("STALE_TOKEN");
         if (r.policyMask != 7) return quarantineRecord(r, "POLICY_INCOMPLETE");
         if (!snapshotCurrent(r)) return quarantineRecord(r, "SNAPSHOT_CHANGED");
+        r.completionRollback = CompletionRollback.capture(r);
         try {
-            ItemStack[] staged = copySlots(r.input);
+            ItemStack[] staged = flatSlots(r);
             for (VirtualSalePlan.Removal removal : r.plan.removals()) {
                 ItemStack stack = staged[removal.slot()].copy();
                 if (stack.getCount() < removal.count()) {
+                    r.completionRollback = null;
                     return quarantineRecord(r, "REMOVAL_CHANGED");
                 }
                 stack.shrink(removal.count());
                 staged[removal.slot()] = stack;
             }
-            commitSlots(r, InventorySide.INPUT, staged);
+            for (VirtualSalePlan.StackEntry entry : r.plan.outputs()) {
+                if (!insertStack(staged, r.plan.stack(entry))) {
+                    r.completionRollback = null;
+                    return quarantineRecord(r, "OUTPUT_CAPACITY_CHANGED");
+                }
+            }
+            for (VirtualSalePlan.StackEntry entry : r.plan.receipts()) {
+                if (!insertStack(staged, r.plan.stack(entry))) {
+                    r.completionRollback = null;
+                    return quarantineRecord(r, "OUTPUT_CAPACITY_CHANGED");
+                }
+            }
+            commitFlatSlots(r, staged);
             long now = r.lastObservedGameTime;
             clearPlan(r);
             r.state = State.IDLE;
@@ -313,8 +319,27 @@ public final class VirtualShippingSavedData extends SavedData {
             setDirty();
             return BridgeResult.success();
         } catch (RuntimeException exception) {
+            rollbackCompletion(token, owner);
             return quarantineRecord(r, "INPUT_REMOVAL_EXCEPTION");
         }
+    }
+    /** Clears the transient pre-completion snapshot only after the completed state is durable. */
+    public synchronized void finishCompletion(UUID token, UUID owner) {
+        Record record = records.get(owner);
+        if (record != null && record.state == State.IDLE && record.completionRollback != null
+                && token.equals(record.completionRollback.token)) {
+            record.completionRollback = null;
+        }
+    }
+    /** Restores the exact APPLYING state after a failed completion save, before quarantine. */
+    public synchronized void rollbackCompletion(UUID token, UUID owner) {
+        Record record = records.get(owner);
+        if (record == null || record.completionRollback == null) return;
+        CompletionRollback rollback = record.completionRollback;
+        if (!token.equals(rollback.token)) return;
+        rollback.restore(record);
+        record.completionRollback = null;
+        setDirty();
     }
 
     public synchronized BridgeResult quarantine(UUID token, UUID owner, String reason) {
@@ -472,20 +497,51 @@ public final class VirtualShippingSavedData extends SavedData {
         setDirty();
         return BridgeResult.quarantine(record.reason);
     }
-    private static boolean snapshotCurrent(Record r) { return r.inputGeneration == r.inputGenerationAtPlan && Arrays.equals(r.snapshotDigest, CanonicalInputFingerprint.sha256(r.input)); }
-    private static boolean canInsertAll(ItemStack[] output, VirtualSalePlan plan) { ItemStack[] simulated = copySlots(output); for (VirtualSalePlan.StackEntry e : plan.outputs()) if (!insertStack(simulated, plan.stack(e))) return false; for (VirtualSalePlan.StackEntry e : plan.receipts()) if (!insertStack(simulated, plan.stack(e))) return false; return true; }
-    private static boolean insertStack(ItemStack[] slots, ItemStack offered) { ItemStack remaining = offered.copy(); for (int i = 0; i < SLOTS && !remaining.isEmpty(); i++) { ItemStack current = slots[i]; if (!current.isEmpty() && !ItemStack.isSameItemSameTags(current, remaining)) continue; int room = (current.isEmpty() ? remaining.getMaxStackSize() : current.getMaxStackSize() - current.getCount()); if (room <= 0) continue; int accepted = Math.min(room, remaining.getCount()); if (current.isEmpty()) { slots[i] = remaining.copy(); slots[i].setCount(accepted); } else current.grow(accepted); remaining.shrink(accepted); } return remaining.isEmpty(); }
+    private static boolean snapshotCurrent(Record r) {
+        return combinedGeneration(r) == r.inputGenerationAtPlan
+                && Arrays.equals(r.snapshotDigest, CanonicalInputFingerprint.sha256(flatSlots(r)));
+    }
+    /** Simulates proceeds only after the planned sale removals free unified inventory space. */
+    private static boolean canInsertAll(ItemStack[] inventory, VirtualSalePlan plan) {
+        ItemStack[] simulated = copyFlatSlots(inventory);
+        for (VirtualSalePlan.Removal removal : plan.removals()) {
+            ItemStack stack = simulated[removal.slot()].copy();
+            if (stack.getCount() < removal.count()) return false;
+            stack.shrink(removal.count());
+            simulated[removal.slot()] = stack;
+        }
+        for (VirtualSalePlan.StackEntry e : plan.outputs()) if (!insertStack(simulated, plan.stack(e))) return false;
+        for (VirtualSalePlan.StackEntry e : plan.receipts()) if (!insertStack(simulated, plan.stack(e))) return false;
+        return true;
+    }
+    private static boolean insertStack(ItemStack[] slots, ItemStack offered) { ItemStack remaining = offered.copy(); for (int i = 0; i < slots.length && !remaining.isEmpty(); i++) { ItemStack current = slots[i]; if (!current.isEmpty() && !ItemStack.isSameItemSameTags(current, remaining)) continue; int room = (current.isEmpty() ? remaining.getMaxStackSize() : current.getMaxStackSize() - current.getCount()); if (room <= 0) continue; int accepted = Math.min(room, remaining.getCount()); if (current.isEmpty()) { slots[i] = remaining.copy(); slots[i].setCount(accepted); } else current.grow(accepted); remaining.shrink(accepted); } return remaining.isEmpty(); }
     private static void clearPlan(Record r) { r.token = null; r.snapshotDigest = null; r.inputSnapshot = null; r.plan = null; r.policyMask = 0; r.outputApplied = false; }
     private static boolean validSlot(int slot) { return slot >= 0 && slot < SLOTS; }
     private static ItemStack copy(ItemStack stack) { return stack == null || stack.isEmpty() ? ItemStack.EMPTY : stack.copy(); }
     private static ItemStack[] emptyStacks() { ItemStack[] result = new ItemStack[SLOTS]; Arrays.fill(result, ItemStack.EMPTY); return result; }
+    private static ItemStack[] emptyFlatSlots() { ItemStack[] result = new ItemStack[FLAT_SLOTS]; Arrays.fill(result, ItemStack.EMPTY); return result; }
     private static ItemStack[] copySlots(ItemStack[] source) { ItemStack[] result = emptyStacks(); copyInto(source, result); return result; }
+    private static ItemStack[] copyFlatSlots(ItemStack[] source) { ItemStack[] result = emptyFlatSlots(); for (int i = 0; i < FLAT_SLOTS; i++) result[i] = copy(source[i]); return result; }
     private static void copyInto(ItemStack[] from, ItemStack[] to) { for (int i = 0; i < SLOTS; i++) to[i] = copy(from[i]); }
+    private static ItemStack[] flatSlots(Record record) {
+        ItemStack[] result = emptyFlatSlots();
+        copyInto(record.input, result);
+        for (int slot = 0; slot < SLOTS; slot++) result[SLOTS + slot] = copy(record.output[slot]);
+        return result;
+    }
+    private static long combinedGeneration(Record record) {
+        return Math.addExact(record.inputGeneration, record.outputGeneration);
+    }
+    private static void commitFlatSlots(Record record, ItemStack[] staged) {
+        commitSlots(record, InventorySide.INPUT, Arrays.copyOfRange(staged, 0, SLOTS));
+        commitSlots(record, InventorySide.OUTPUT, Arrays.copyOfRange(staged, SLOTS, FLAT_SLOTS));
+    }
     private static void validateState(Record record) {
         boolean hasPlanningSnapshot = record.token != null && record.inputSnapshot != null
+                && record.inputSnapshot.length == FLAT_SLOTS
                 && record.snapshotDigest != null && record.snapshotDigest.length == 32
                 && Arrays.equals(record.snapshotDigest, CanonicalInputFingerprint.sha256(record.inputSnapshot))
-                && record.inputGenerationAtPlan == record.inputGeneration;
+                && record.inputGenerationAtPlan == combinedGeneration(record);
         if (record.state == State.IDLE) {
             if (record.token != null || record.snapshotDigest != null || record.inputSnapshot != null
                     || record.plan != null || record.policyMask != 0 || record.outputApplied) {
@@ -572,7 +628,7 @@ public final class VirtualShippingSavedData extends SavedData {
         private long inputGeneration, outputGeneration, nextSaleGameTime, lastObservedGameTime, inputGenerationAtPlan;
         private final long[] inputSlotGenerations = new long[SLOTS];
         private final long[] outputSlotGenerations = new long[SLOTS];
-        private State state = State.IDLE; @Nullable private UUID token; @Nullable private UUID lastAbortedToken; @Nullable private byte[] snapshotDigest; @Nullable private ItemStack[] inputSnapshot; @Nullable private VirtualSalePlan plan; @Nullable private String reason; @Nullable private Integer leaseContainer; private int policyMask, recoveryCount; @Nullable private UUID lastRecoveryActor; @Nullable private UUID lastRecoveryToken; private long lastRecoveryGameTime; private boolean recoveryAuditPending, outputApplied; @Nullable private RecoveryRollback recoveryRollback;
+        private State state = State.IDLE; @Nullable private UUID token; @Nullable private UUID lastAbortedToken; @Nullable private byte[] snapshotDigest; @Nullable private ItemStack[] inputSnapshot; @Nullable private VirtualSalePlan plan; @Nullable private String reason; @Nullable private Integer leaseContainer; private int policyMask, recoveryCount; @Nullable private UUID lastRecoveryActor; @Nullable private UUID lastRecoveryToken; private long lastRecoveryGameTime; private boolean recoveryAuditPending, outputApplied; @Nullable private RecoveryRollback recoveryRollback; @Nullable private CompletionRollback completionRollback;
         private Record(UUID owner, long deadline) { this.owner = owner; nextSaleGameTime = deadline; }
         private ItemStack[] stacks(InventorySide side) { return side == InventorySide.INPUT ? input : output; }
         private long generation(InventorySide side) { return side == InventorySide.INPUT ? inputGeneration : outputGeneration; }
@@ -587,7 +643,7 @@ public final class VirtualShippingSavedData extends SavedData {
         private long[] slotGenerations(InventorySide side) {
             return side == InventorySide.INPUT ? inputSlotGenerations : outputSlotGenerations;
         }
-        private CompoundTag save() { CompoundTag tag = new CompoundTag(); tag.putUUID("Owner", owner); tag.put("Input", saveStacks(input)); tag.put("Output", saveStacks(output)); tag.putLong("InputGeneration", inputGeneration); tag.putLong("OutputGeneration", outputGeneration); tag.putLong("NextSaleGameTime", nextSaleGameTime); tag.putLong("LastObservedGameTime", lastObservedGameTime); tag.putString("State", state.name()); if (reason != null) tag.putString("Reason", reason); tag.putInt("RecoveryCount", recoveryCount); if (lastRecoveryActor != null) tag.putUUID("LastRecoveryActor", lastRecoveryActor); if (lastRecoveryToken != null) tag.putUUID("LastRecoveryToken", lastRecoveryToken); tag.putLong("LastRecoveryGameTime", lastRecoveryGameTime); tag.putBoolean("RecoveryAuditPending", recoveryAuditPending); if (token != null) tag.putUUID("Token", token); if (lastAbortedToken != null) tag.putUUID("LastAbortedToken", lastAbortedToken); if (snapshotDigest != null) tag.putByteArray("SnapshotDigest", snapshotDigest); if (inputSnapshot != null) tag.put("InputSnapshot", saveStacks(inputSnapshot)); tag.putLong("PlanInputGeneration", inputGenerationAtPlan); tag.putInt("PolicyMask", policyMask); tag.putBoolean("OutputApplied", outputApplied); if (plan != null) tag.put("Plan", plan.save()); return tag; }
+        private CompoundTag save() { CompoundTag tag = new CompoundTag(); tag.putUUID("Owner", owner); tag.put("Input", saveStacks(input)); tag.put("Output", saveStacks(output)); tag.putLong("InputGeneration", inputGeneration); tag.putLong("OutputGeneration", outputGeneration); tag.putLong("NextSaleGameTime", nextSaleGameTime); tag.putLong("LastObservedGameTime", lastObservedGameTime); tag.putString("State", state.name()); if (reason != null) tag.putString("Reason", reason); tag.putInt("RecoveryCount", recoveryCount); if (lastRecoveryActor != null) tag.putUUID("LastRecoveryActor", lastRecoveryActor); if (lastRecoveryToken != null) tag.putUUID("LastRecoveryToken", lastRecoveryToken); tag.putLong("LastRecoveryGameTime", lastRecoveryGameTime); tag.putBoolean("RecoveryAuditPending", recoveryAuditPending); if (token != null) tag.putUUID("Token", token); if (lastAbortedToken != null) tag.putUUID("LastAbortedToken", lastAbortedToken); if (snapshotDigest != null) tag.putByteArray("SnapshotDigest", snapshotDigest); if (inputSnapshot != null) tag.put("InputSnapshot", saveFlatStacks(inputSnapshot)); tag.putLong("PlanInputGeneration", inputGenerationAtPlan); tag.putInt("PolicyMask", policyMask); tag.putBoolean("OutputApplied", outputApplied); if (plan != null) tag.put("Plan", plan.save()); return tag; }
         private static Record load(CompoundTag tag) {
             UUID owner = requireUuid(tag, "Owner");
             if (!RECORD_KEYS.containsAll(tag.getAllKeys())) {
@@ -639,8 +695,8 @@ public final class VirtualShippingSavedData extends SavedData {
                 r.snapshotDigest = tag.getByteArray("SnapshotDigest");
             }
             if (tag.get("InputSnapshot") != null) {
-                r.inputSnapshot = emptyStacks();
-                loadStacks(requireCompoundList(tag, "InputSnapshot"), r.inputSnapshot);
+                r.inputSnapshot = emptyFlatSlots();
+                loadFlatStacks(requireCompoundList(tag, "InputSnapshot"), r.inputSnapshot);
             }
             if (tag.get("Plan") != null) {
                 requireTag(tag, "Plan", Tag.TAG_COMPOUND);
@@ -667,6 +723,7 @@ public final class VirtualShippingSavedData extends SavedData {
             return record;
         }
         private static ListTag saveStacks(ItemStack[] stacks) { ListTag result = new ListTag(); for (int slot = 0; slot < SLOTS; slot++) if (!stacks[slot].isEmpty()) { CompoundTag entry = new CompoundTag(); entry.putByte("Slot", (byte) slot); entry.put("Stack", stacks[slot].save(new CompoundTag())); result.add(entry); } return result; }
+        private static ListTag saveFlatStacks(ItemStack[] stacks) { ListTag result = new ListTag(); for (int slot = 0; slot < FLAT_SLOTS; slot++) if (!stacks[slot].isEmpty()) { CompoundTag entry = new CompoundTag(); entry.putByte("Slot", (byte) slot); entry.put("Stack", stacks[slot].save(new CompoundTag())); result.add(entry); } return result; }
         private static void loadStacks(ListTag source, ItemStack[] target) {
             boolean[] occupied = new boolean[SLOTS];
             for (Tag entry : source) {
@@ -678,6 +735,27 @@ public final class VirtualShippingSavedData extends SavedData {
                 }
                 int slot = stackTag.getByte("Slot") & 255;
                 if (!validSlot(slot) || occupied[slot]) {
+                    throw new IllegalArgumentException("Invalid or duplicate stack slot");
+                }
+                ItemStack stack = ItemStack.of(stackTag.getCompound("Stack"));
+                if (stack.isEmpty() || stack.getCount() < 1 || stack.getCount() > stack.getMaxStackSize()) {
+                    throw new IllegalArgumentException("Invalid stack");
+                }
+                target[slot] = stack;
+                occupied[slot] = true;
+            }
+        }
+        private static void loadFlatStacks(ListTag source, ItemStack[] target) {
+            boolean[] occupied = new boolean[FLAT_SLOTS];
+            for (Tag entry : source) {
+                if (!(entry instanceof CompoundTag stackTag)
+                        || !stackTag.getAllKeys().equals(Set.of("Slot", "Stack"))
+                        || !stackTag.contains("Slot", Tag.TAG_BYTE)
+                        || !stackTag.contains("Stack", Tag.TAG_COMPOUND)) {
+                    throw new IllegalArgumentException("Invalid stack entry");
+                }
+                int slot = stackTag.getByte("Slot") & 255;
+                if (slot >= FLAT_SLOTS || occupied[slot]) {
                     throw new IllegalArgumentException("Invalid or duplicate stack slot");
                 }
                 ItemStack stack = ItemStack.of(stackTag.getCompound("Stack"));
@@ -707,7 +785,7 @@ public final class VirtualShippingSavedData extends SavedData {
         private static RecoveryRollback capture(Record record) {
             return new RecoveryRollback(record.token,
                     record.snapshotDigest == null ? null : record.snapshotDigest.clone(),
-                    record.inputSnapshot == null ? null : copySlots(record.inputSnapshot),
+                    record.inputSnapshot == null ? null : copyFlatSlots(record.inputSnapshot),
                     record.plan, record.policyMask, record.outputApplied, record.state, record.reason,
                     record.nextSaleGameTime, record.lastObservedGameTime, record.recoveryCount,
                     record.recoveryAuditPending);
@@ -716,7 +794,7 @@ public final class VirtualShippingSavedData extends SavedData {
         private void restore(Record record) {
             record.token = token;
             record.snapshotDigest = snapshotDigest == null ? null : snapshotDigest.clone();
-            record.inputSnapshot = inputSnapshot == null ? null : copySlots(inputSnapshot);
+            record.inputSnapshot = inputSnapshot == null ? null : copyFlatSlots(inputSnapshot);
             record.plan = plan;
             record.policyMask = policyMask;
             record.outputApplied = outputApplied;
@@ -726,6 +804,78 @@ public final class VirtualShippingSavedData extends SavedData {
             record.lastObservedGameTime = lastObservedGameTime;
             record.recoveryCount = recoveryCount;
             record.recoveryAuditPending = recoveryAuditPending;
+        }
+    }
+    private static final class CompletionRollback {
+        private final ItemStack[] input, output, inputSnapshot;
+        private final long inputGeneration, outputGeneration, nextSaleGameTime, lastObservedGameTime,
+                inputGenerationAtPlan, lastRecoveryGameTime;
+        private final long[] inputSlotGenerations, outputSlotGenerations;
+        private final State state;
+        @Nullable private final UUID token, lastAbortedToken, lastRecoveryActor, lastRecoveryToken;
+        @Nullable private final byte[] snapshotDigest;
+        @Nullable private final VirtualSalePlan plan;
+        @Nullable private final String reason;
+        @Nullable private final Integer leaseContainer;
+        private final int policyMask, recoveryCount;
+        private final boolean recoveryAuditPending, outputApplied;
+
+        private CompletionRollback(Record record) {
+            input = copySlots(record.input);
+            output = copySlots(record.output);
+            inputSnapshot = record.inputSnapshot == null ? null : copyFlatSlots(record.inputSnapshot);
+            inputGeneration = record.inputGeneration;
+            outputGeneration = record.outputGeneration;
+            nextSaleGameTime = record.nextSaleGameTime;
+            lastObservedGameTime = record.lastObservedGameTime;
+            inputGenerationAtPlan = record.inputGenerationAtPlan;
+            lastRecoveryGameTime = record.lastRecoveryGameTime;
+            inputSlotGenerations = record.inputSlotGenerations.clone();
+            outputSlotGenerations = record.outputSlotGenerations.clone();
+            state = record.state;
+            token = record.token;
+            lastAbortedToken = record.lastAbortedToken;
+            lastRecoveryActor = record.lastRecoveryActor;
+            lastRecoveryToken = record.lastRecoveryToken;
+            snapshotDigest = record.snapshotDigest == null ? null : record.snapshotDigest.clone();
+            plan = record.plan;
+            reason = record.reason;
+            leaseContainer = record.leaseContainer;
+            policyMask = record.policyMask;
+            recoveryCount = record.recoveryCount;
+            recoveryAuditPending = record.recoveryAuditPending;
+            outputApplied = record.outputApplied;
+        }
+
+        private static CompletionRollback capture(Record record) {
+            return new CompletionRollback(record);
+        }
+
+        private void restore(Record record) {
+            copyInto(input, record.input);
+            copyInto(output, record.output);
+            record.inputGeneration = inputGeneration;
+            record.outputGeneration = outputGeneration;
+            record.nextSaleGameTime = nextSaleGameTime;
+            record.lastObservedGameTime = lastObservedGameTime;
+            record.inputGenerationAtPlan = inputGenerationAtPlan;
+            record.lastRecoveryGameTime = lastRecoveryGameTime;
+            System.arraycopy(inputSlotGenerations, 0, record.inputSlotGenerations, 0, SLOTS);
+            System.arraycopy(outputSlotGenerations, 0, record.outputSlotGenerations, 0, SLOTS);
+            record.state = state;
+            record.token = token;
+            record.lastAbortedToken = lastAbortedToken;
+            record.lastRecoveryActor = lastRecoveryActor;
+            record.lastRecoveryToken = lastRecoveryToken;
+            record.snapshotDigest = snapshotDigest == null ? null : snapshotDigest.clone();
+            record.inputSnapshot = inputSnapshot == null ? null : copyFlatSlots(inputSnapshot);
+            record.plan = plan;
+            record.reason = reason;
+            record.leaseContainer = leaseContainer;
+            record.policyMask = policyMask;
+            record.recoveryCount = recoveryCount;
+            record.recoveryAuditPending = recoveryAuditPending;
+            record.outputApplied = outputApplied;
         }
     }
 }

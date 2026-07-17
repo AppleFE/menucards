@@ -62,7 +62,7 @@ const virtualShippingEconomyTerms = (terms) => {
   }
 };
 
-const virtualShippingDebt = (server, playerId, terms) => {
+const virtualShippingDebt = (server, playerId, terms, beforeMutation) => {
   var matches = (server.persistentData.debts || []).filter(
     (debt) => debt.uuid === playerId
   );
@@ -74,13 +74,15 @@ const virtualShippingDebt = (server, playerId, terms) => {
   var debt = Number(terms.debt());
   var debtPaid = Number(terms.debtPaid());
   if (currentAmount !== debt) throw new Error("DEBT_CHANGED");
-  if (debtPaid <= 0) return;
+  if (debtPaid <= 0) return false;
+  beforeMutation();
   global.setDebt(server, playerId, debt - debtPaid);
+  return true;
 };
 
-const virtualShippingBank = (terms) => {
+const virtualShippingBank = (terms, beforeMutation) => {
   var bankDeposit = Number(terms.bankDeposit());
-  if (bankDeposit <= 0) return;
+  if (bankDeposit <= 0) return false;
   var account = global.GLOBAL_BANK.getAccount(String(terms.accountId()));
   if (!account) throw new Error("BANK_CHANGED");
   var balance = Number(account.getBalance());
@@ -92,10 +94,63 @@ const virtualShippingBank = (terms) => {
   ) {
     throw new Error("BANK_CHANGED");
   }
+  beforeMutation();
   account.deposit(bankDeposit);
+  return true;
 };
 
-console.info("[MENUCARDS] Virtual shipping scheduler ABI input=27 output=27");
+const virtualShippingCompensate = (
+  server,
+  playerId,
+  terms,
+  debtMutated,
+  bankMutated
+) => {
+  if (bankMutated) {
+    var expectedBalance = Number(terms.expectedAccountBalance());
+    var bankDeposit = Number(terms.bankDeposit());
+    var account = global.GLOBAL_BANK.getAccount(String(terms.accountId()));
+    if (!account) {
+      throw new Error("BANK_COMPENSATION_FAILED");
+    }
+    var currentBalance = Number(account.getBalance());
+    if (currentBalance === expectedBalance + bankDeposit) {
+      account.setBalance(expectedBalance);
+      if (Number(account.getBalance()) !== expectedBalance) {
+        throw new Error("BANK_COMPENSATION_FAILED");
+      }
+    } else if (currentBalance !== expectedBalance) {
+      throw new Error("BANK_COMPENSATION_FAILED");
+    }
+  }
+  if (debtMutated) {
+    var debt = Number(terms.debt());
+    var debtPaid = Number(terms.debtPaid());
+    var matches = (server.persistentData.debts || []).filter(
+      (entry) => entry.uuid === playerId
+    );
+    if (matches.length > 1) {
+      throw new Error("DEBT_COMPENSATION_FAILED");
+    }
+    var currentDebt = Number(matches.length === 0 ? 0 : matches[0].amount);
+    if (currentDebt === debt - debtPaid) {
+      global.setDebt(server, playerId, debt);
+      matches = (server.persistentData.debts || []).filter(
+        (entry) => entry.uuid === playerId
+      );
+      if (
+        matches.length > 1 ||
+        Number(matches.length === 0 ? 0 : matches[0].amount) !== debt
+      ) {
+        throw new Error("DEBT_COMPENSATION_FAILED");
+      }
+    } else if (currentDebt !== debt) {
+      throw new Error("DEBT_COMPENSATION_FAILED");
+    }
+  }
+};
+
+console.info("[MENUCARDS] Virtual shipping scheduler ABI inventory=54");
 console.info("[MENUCARDS] menucards_virtual_shipping_scheduler_registered");
 
 ServerEvents.tick((event) => {
@@ -105,6 +160,10 @@ ServerEvents.tick((event) => {
   if (!lease) return;
 
   var phase = "PLANNING";
+  var economy = null;
+  var debtMutated = false;
+  var bankMutated = false;
+  var inputCompleted = false;
   try {
     var sale = global.planVirtualShipping(lease, server);
     var submitted = bridge.submitPlan(lease, sale.json);
@@ -126,60 +185,67 @@ ServerEvents.tick((event) => {
       return;
     }
     phase = "OUTPUT";
-    var economy = bridge.acceptedEconomyTerms(lease);
+    economy = bridge.acceptedEconomyTerms(lease);
     virtualShippingEconomyTerms(economy);
 
     var outputApplied = bridge.applyPlannedOutput(lease);
     if (!virtualShippingResultSucceeded(outputApplied)) {
-      if (virtualShippingResultCode(outputApplied) !== "AMBIGUOUS_QUARANTINE") {
-        throw new Error(`OUTPUT_${virtualShippingResultCode(outputApplied)}`);
-      }
-      return;
+      throw new Error(`OUTPUT_${virtualShippingResultCode(outputApplied)}`);
     }
     var outputReported = bridge.reportPolicyStep(lease, "OUTPUT");
     if (!virtualShippingResultSucceeded(outputReported)) {
-      if (virtualShippingResultCode(outputReported) !== "AMBIGUOUS_QUARANTINE") {
-        throw new Error(`OUTPUT_REPORT_${virtualShippingResultCode(outputReported)}`);
-      }
-      return;
+      throw new Error(`OUTPUT_REPORT_${virtualShippingResultCode(outputReported)}`);
     }
     phase = "DEBT";
-    virtualShippingDebt(server, String(lease.playerId()), economy);
+    virtualShippingDebt(server, String(lease.playerId()), economy, () => {
+      debtMutated = true;
+    });
     var debtReported = bridge.reportPolicyStep(lease, "DEBT");
     if (!virtualShippingResultSucceeded(debtReported)) {
-      if (virtualShippingResultCode(debtReported) !== "AMBIGUOUS_QUARANTINE") {
-        throw new Error(`DEBT_REPORT_${virtualShippingResultCode(debtReported)}`);
-      }
-      return;
+      throw new Error(`DEBT_REPORT_${virtualShippingResultCode(debtReported)}`);
     }
     phase = "BANK";
-    virtualShippingBank(economy);
+    virtualShippingBank(economy, () => {
+      bankMutated = true;
+    });
     var bankReported = bridge.reportPolicyStep(lease, "BANK");
     if (!virtualShippingResultSucceeded(bankReported)) {
-      if (virtualShippingResultCode(bankReported) !== "AMBIGUOUS_QUARANTINE") {
-        throw new Error(`BANK_REPORT_${virtualShippingResultCode(bankReported)}`);
-      }
-      return;
+      throw new Error(`BANK_REPORT_${virtualShippingResultCode(bankReported)}`);
     }
     phase = "INPUT";
     var completed = bridge.removeInputAndComplete(lease);
     if (!virtualShippingResultSucceeded(completed)) {
-      if (virtualShippingResultCode(completed) !== "AMBIGUOUS_QUARANTINE") {
-        throw new Error(`INPUT_${virtualShippingResultCode(completed)}`);
-      }
-      return;
+      throw new Error(`INPUT_${virtualShippingResultCode(completed)}`);
     }
+    inputCompleted = true;
   } catch (error) {
     console.error(`[MENUCARDS] Virtual shipping ${phase} failure`, error);
-    var rawReason = String(error?.message || error || "UNKNOWN")
+    var rawReason = String((error && error.message) || error || "UNKNOWN")
       .toUpperCase()
       .replace(/[^A-Z0-9_]/g, "_")
       .slice(0, 96);
     var reason = `${phase}_${rawReason || "UNKNOWN"}`;
-    if (phase !== "PLANNING") {
-      virtualShippingQuarantine(bridge, lease, reason);
-    } else {
+    if (phase === "PLANNING") {
       virtualShippingAbort(bridge, lease, reason);
+      return;
     }
+    if (!inputCompleted && (debtMutated || bankMutated)) {
+      try {
+        virtualShippingCompensate(
+          server,
+          String(lease.playerId()),
+          economy,
+          debtMutated,
+          bankMutated
+        );
+      } catch (compensationError) {
+        reason = `${phase}_COMPENSATION_FAILED`;
+        console.error(
+          `[MENUCARDS] Virtual shipping ${reason} manual reconciliation required`,
+          compensationError
+        );
+      }
+    }
+    virtualShippingQuarantine(bridge, lease, reason);
   }
 });
