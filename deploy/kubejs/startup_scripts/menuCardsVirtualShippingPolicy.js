@@ -71,34 +71,34 @@ global.planVirtualShipping = (lease, server) => {
         : undefined;
   const stackHasTag = (stack, tag) => Item.of(stack).hasTag(tag);
 
-  for (let slot = 0; slot < 54; slot++) {
-    const stack = input[slot];
-    const item = stackItem(stack);
-    const itemId = String(Item.of(stack).id);
-    const sellable =
+  for (var slot = 0; slot < 54; slot++) {
+    var stack = input[slot];
+    var item = stackItem(stack);
+    var itemId = String(Item.of(stack).id);
+    var sellable =
       global.trades.has(itemId) ||
       ["splendid_slimes:plort", "splendid_slimes:slime_heart"].includes(itemId);
     if (!sellable || stackCount(stack) <= 0) continue;
 
-    let trade = global.trades.get(itemId);
-    const nbt = stackNbt(stack);
+    var trade = global.trades.get(itemId);
+    var nbt = stackNbt(stack);
     if (nbt && ((nbt.slime && nbt.slime.id) || (nbt.plort && nbt.plort.id))) {
       if (nbt.slime) trade = global.trades.get(`${itemId}/${nbt.slime.id}`);
       if (nbt.plort) trade = global.trades.get(`${itemId}/${nbt.plort.id}`);
     }
     if (!trade) continue;
 
-    const qualityValue = Number(nbt?.quality_food?.quality);
-    const quality = Number.isInteger(qualityValue) && qualityValue >= 0 && qualityValue <= 3
+    var qualityValue = Number(nbt?.quality_food?.quality);
+    var quality = Number.isInteger(qualityValue) && qualityValue >= 0 && qualityValue <= 3
       ? qualityValue
       : undefined;
-    const doubleQuality =
+    var doubleQuality =
       quality &&
       quality > 0 &&
       stages.includes("the_quality_of_the_earth") &&
       trade.multiplier.equals("shippingbin:crop_sell_multiplier") &&
       !Item.of(item).hasTag("minecraft:fishes");
-    let itemValue = calculateQualityValue(trade.value, quality, doubleQuality);
+    var itemValue = calculateQualityValue(trade.value, quality, doubleQuality);
     if (!Number.isFinite(itemValue) || itemValue < 0) throw new Error("ITEM_VALUE_INVALID");
     if (stages.includes("bluegill_meridian") && itemId === "aquaculture:bluegill") {
       itemValue = calculateQualityValue(666, quality);
@@ -117,11 +117,11 @@ global.planVirtualShipping = (lease, server) => {
     }
     if (!Number.isFinite(itemValue) || itemValue < 0) throw new Error("ITEM_VALUE_INVALID");
 
-    const multiplier = Number(global.getAttributeMultiplier(attributes, trade.multiplier));
+    var multiplier = Number(global.getAttributeMultiplier(attributes, trade.multiplier));
     if (!Number.isFinite(multiplier) || multiplier < 0) {
       throw new Error("ATTRIBUTE_MULTIPLIER_INVALID");
     }
-    const multiplied = Math.round(itemValue * stackCount(stack) * multiplier);
+    var multiplied = Math.round(itemValue * stackCount(stack) * multiplier);
     requireAmount(multiplied, "STACK_VALUE_INVALID");
     if (multiplied === 0) continue;
     calculatedValue = requireAmount(calculatedValue + multiplied, "SALE_VALUE_INVALID");

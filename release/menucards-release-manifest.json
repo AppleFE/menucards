@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseUtc": "2026-07-17T19:38:28.896616Z",
+  "releaseUtc": "2026-07-17T19:59:18.521500Z",
   "target": {
     "minecraft": "1.20.1",
     "forge": "47.4.0",
@@ -22,7 +22,7 @@
     "policyScript": {
       "source": "deploy/kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
       "deployedPath": "kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
-      "sha256": "734c03f9b3edefe7763946ce1d9e649d4a5dadf59e0112d1ccbd7f197376e0b0"
+      "sha256": "fc9365bc2cd22d2793c2569067f0b04fa1a756ffed556516c55e492d1d340f7b"
     },
     "schedulerScript": {
       "source": "deploy/kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js",
@@ -31,15 +31,16 @@
     }
   },
   "deployment": {
-    "status": "deployed-active",
+    "status": "policy-staged-restart-required",
     "backupPaths": [
       "backups/menucards/20260717T155526Z",
       "backups/menucards/20260717T160120Z",
       "backups/menucards/20260717T161644Z",
       "backups/menucards/20260717T193119Z",
-      "backups/menucards/20260717T193329Z"
+      "backups/menucards/20260717T193329Z",
+      "backups/menucards/20260717T195910Z"
     ],
-    "restartRequired": false,
+    "restartRequired": true,
     "serverRestartedWithFinalPlugin": true,
     "liveServer": {
       "pid": 36488,
@@ -74,18 +75,19 @@
     "nodePolicyQa": "passed",
     "gradleBuild": "passed",
     "gitDiffCheck": "passed",
-    "runtimeActivation": "passed on PID 36488 with Rhino-safe scheduler logging"
+    "runtimeActivation": "pending restart for Rhino loop-scope policy fix"
   },
   "reviewReceipts": {
     "shippingArchitect": "agent://104-ArchSmartBinRelease",
     "shippingQa": "agent://105-ExecSmartBinRelease",
     "kubeJsQa": "agent://107-ExecKubeJsBridge",
-    "status": "PASSED_RUNTIME_VERIFIED"
+    "status": "SOURCE_TESTS_PASSED_RUNTIME_RESTART_PENDING"
   },
   "incidentNotes": [
     "The menu now opens the real smart shipping bin as a vanilla six-row chest instead of ShippingBin v4 Inputs/Profits UI.",
     "All 54 private persisted slots participate in sale planning and exactly-once compensation.",
     "KubeJS denies the com.sun prefix, so the package allow was replaced by a strong exact-class allow for VirtualShippingBridge. The restarted server loaded the class and registered the inventory=54 scheduler successfully.",
-    "The disappearing menu was caused by a scheduler exception logger calling Rhino ConsoleJS.error with two arguments, leaving the owner record in PLANNING. Logging now uses one string argument, and menu acquisition safely reclaims an abandoned PLANNING token before opening."
+    "The disappearing menu was caused by a scheduler exception logger calling Rhino ConsoleJS.error with two arguments, leaving the owner record in PLANNING. Logging now uses one string argument, and menu acquisition safely reclaims an abandoned PLANNING token before opening.",
+    "Sales were retrying every five minutes but Rhino rejected block-scoped declarations inside the 54-slot loop as redeclarations. Loop-local declarations now use function-scoped var bindings compatible with the production Rhino runtime."
   ]
 }
