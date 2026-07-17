@@ -122,6 +122,22 @@ public final class VirtualShippingSavedData extends SavedData {
         ItemStack remainder = copy(offered); for (int slot = Math.max(0, start); slot < SLOTS && !remainder.isEmpty(); slot++) remainder = insert(owner, side, slot, remainder, simulate); return remainder;
     }
     public synchronized boolean acquireLease(UUID owner, int containerId) { Record r = records.get(owner); if (r == null || r.state != State.IDLE || r.leaseContainer != null && r.leaseContainer != containerId) return false; if (r.leaseContainer == null) { r.leaseContainer = containerId; setDirty(); } return true; }
+    /**
+     * A menu request may safely supersede an abandoned PLANNING token because policy effects
+     * cannot begin until the record reaches APPLYING on the same server thread.
+     */
+    public synchronized boolean acquireMenuLease(UUID owner, int containerId) {
+        Record record = records.get(owner);
+        if (record != null && record.state == State.PLANNING && record.token != null) {
+            record.lastAbortedToken = record.token;
+            clearPlan(record);
+            record.state = State.IDLE;
+            record.reason = "menu_opened";
+            record.nextSaleGameTime = deadlineAfter(record.lastObservedGameTime);
+            setDirty();
+        }
+        return acquireLease(owner, containerId);
+    }
     public synchronized void releaseLease(UUID owner, int containerId) { Record r = records.get(owner); if (r != null && r.leaseContainer != null && r.leaseContainer == containerId) { r.leaseContainer = null; setDirty(); } }
     public synchronized void clearTransientLeases() {
         boolean changed = false;

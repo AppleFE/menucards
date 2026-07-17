@@ -28,7 +28,7 @@ public final class MenuCardsShippingBinMenu extends ChestMenu {
         this.data = data;
         this.owner = owner;
         this.leaseContainerId = containerId;
-        this.leaseHeld = data.acquireLease(owner, containerId);
+        this.leaseHeld = data.acquireMenuLease(owner, containerId);
         if (leaseHeld) {
             try {
                 ShippingBinMenuIntegration.register(this);

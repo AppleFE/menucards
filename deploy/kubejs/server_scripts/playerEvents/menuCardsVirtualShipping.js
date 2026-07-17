@@ -22,7 +22,7 @@ const virtualShippingAbort = (bridge, lease, reason) => {
       console.error(`[MENUCARDS] Virtual shipping abort failed: ${String(terminal)}`);
     }
   } catch (error) {
-    console.error("[MENUCARDS] Virtual shipping abort persistence failed", error);
+    console.error(`[MENUCARDS] Virtual shipping abort persistence failed: ${String(error)}`);
   }
 };
 
@@ -35,7 +35,7 @@ const virtualShippingQuarantine = (bridge, lease, reason) => {
       );
     }
   } catch (error) {
-    console.error("[MENUCARDS] Virtual shipping quarantine persistence failed", error);
+    console.error(`[MENUCARDS] Virtual shipping quarantine persistence failed: ${String(error)}`);
   }
 };
 
@@ -219,7 +219,7 @@ ServerEvents.tick((event) => {
     }
     inputCompleted = true;
   } catch (error) {
-    console.error(`[MENUCARDS] Virtual shipping ${phase} failure`, error);
+    console.error(`[MENUCARDS] Virtual shipping ${phase} failure: ${String(error)}`);
     var rawReason = String((error && error.message) || error || "UNKNOWN")
       .toUpperCase()
       .replace(/[^A-Z0-9_]/g, "_")
@@ -241,8 +241,7 @@ ServerEvents.tick((event) => {
       } catch (compensationError) {
         reason = `${phase}_COMPENSATION_FAILED`;
         console.error(
-          `[MENUCARDS] Virtual shipping ${reason} manual reconciliation required`,
-          compensationError
+          `[MENUCARDS] Virtual shipping ${reason} manual reconciliation required: ${String(compensationError)}`
         );
       }
     }

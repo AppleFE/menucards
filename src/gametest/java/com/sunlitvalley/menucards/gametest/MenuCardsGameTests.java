@@ -537,6 +537,30 @@ public final class MenuCardsGameTests {
         }
     }
     @GameTest(templateNamespace = MenuCardsMod.MOD_ID, template = "empty", timeoutTicks = 20)
+    public static void menuLeaseReclaimsAbandonedPlanning(GameTestHelper helper) {
+        VirtualShippingSavedData data = new VirtualShippingSavedData();
+        UUID owner = UUID.randomUUID();
+        UUID token = UUID.randomUUID();
+        ItemStack[] snapshot = emptySlots();
+        data.enroll(owner, 0L);
+        try {
+            configurePlanningState(data, owner, token, snapshot);
+        } catch (ReflectiveOperationException exception) {
+            helper.fail("Menu lease fixture must enter PLANNING: " + exception.getMessage());
+            return;
+        }
+
+        helper.assertTrue(data.acquireMenuLease(owner, 79),
+                "Menu open must reclaim a planning token before the client screen is opened");
+        helper.assertTrue(data.state(owner) == VirtualShippingSavedData.State.IDLE
+                        && data.hasLease(owner, 79),
+                "Reclaimed planning state must become an active menu lease");
+        helper.assertTrue(data.abortPlanning(token, "late_policy_abort")
+                        == com.sunlitvalley.menucards.integration.shipping.BridgeResult.PlanningAbortCode.REQUEUED,
+                "The superseded scheduler token must remain idempotently aborted");
+        helper.succeed();
+    }
+    @GameTest(templateNamespace = MenuCardsMod.MOD_ID, template = "empty", timeoutTicks = 20)
     public static void completionSaveRollbackRestoresApplyingState(GameTestHelper helper) {
         VirtualShippingSavedData data = new VirtualShippingSavedData();
         UUID owner = UUID.randomUUID();

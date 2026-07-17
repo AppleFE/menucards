@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseUtc": "2026-07-17T16:20:58.887994Z",
+  "releaseUtc": "2026-07-17T19:38:28.896616Z",
   "target": {
     "minecraft": "1.20.1",
     "forge": "47.4.0",
@@ -13,9 +13,9 @@
   "artifacts": {
     "jar": {
       "source": "build/libs/menucards-1.0.0.jar",
-      "sourceSha256": "cb6d498724f895c0ffc7f499f9dd1fbb718932c6b2d9c4b0dfbc56c170aae26a",
+      "sourceSha256": "5a7a153ddf7881824a923dfd883fee46e79fe0d8c76e6bb0b582c90d61c40fc1",
       "deployedPath": "mods/menucards-1.0.0.jar",
-      "deployedSha256": "cb6d498724f895c0ffc7f499f9dd1fbb718932c6b2d9c4b0dfbc56c170aae26a",
+      "deployedSha256": "5a7a153ddf7881824a923dfd883fee46e79fe0d8c76e6bb0b582c90d61c40fc1",
       "entryCount": 93,
       "kubeJsPlugin": "com.sunlitvalley.menucards.integration.shipping.MenuCardsKubeJSPlugin"
     },
@@ -27,7 +27,7 @@
     "schedulerScript": {
       "source": "deploy/kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js",
       "deployedPath": "kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js",
-      "sha256": "1bcd893b5de54385e301aa6be2e10251bb7617b09fb9bc490975ef9aab7aed9c"
+      "sha256": "cee920952ff61a4174f9711a5c63c763125544ba44b0363e204e18d4e35826b0"
     }
   },
   "deployment": {
@@ -35,17 +35,18 @@
     "backupPaths": [
       "backups/menucards/20260717T155526Z",
       "backups/menucards/20260717T160120Z",
-      "backups/menucards/20260717T161644Z"
+      "backups/menucards/20260717T161644Z",
+      "backups/menucards/20260717T193119Z",
+      "backups/menucards/20260717T193329Z"
     ],
     "restartRequired": false,
     "serverRestartedWithFinalPlugin": true,
     "liveServer": {
-      "pid": 34316,
+      "pid": 36488,
       "process": "java.exe",
-      "remainedRunningDuringFinalStaging": false,
       "runtimeVerified": true
     },
-    "runtimeActivationEvidence": "logs/latest.log:3611-3613 loaded VirtualShippingBridge and registered inventory=54 scheduler; line 4530 server Done"
+    "runtimeActivationEvidence": "logs/latest.log:3548-3549 scheduler registered; line 4455 server Done"
   },
   "contracts": {
     "defaultKey": "SHIFT+E",
@@ -66,24 +67,25 @@
       "errors": 0
     },
     "gameTest": {
-      "tests": 22,
+      "tests": 23,
       "status": "passed"
     },
     "nodeSyntax": "passed",
     "nodePolicyQa": "passed",
     "gradleBuild": "passed",
     "gitDiffCheck": "passed",
-    "runtimeActivation": "passed: exact bridge class loaded and scheduler registered on PID 34316"
+    "runtimeActivation": "passed on PID 36488 with Rhino-safe scheduler logging"
   },
   "reviewReceipts": {
     "shippingArchitect": "agent://104-ArchSmartBinRelease",
     "shippingQa": "agent://105-ExecSmartBinRelease",
     "kubeJsQa": "agent://107-ExecKubeJsBridge",
-    "status": "CLEAR_APPROVE_PASSED_RUNTIME_VERIFIED"
+    "status": "PASSED_RUNTIME_VERIFIED"
   },
   "incidentNotes": [
     "The menu now opens the real smart shipping bin as a vanilla six-row chest instead of ShippingBin v4 Inputs/Profits UI.",
     "All 54 private persisted slots participate in sale planning and exactly-once compensation.",
-    "KubeJS denies the com.sun prefix, so the package allow was replaced by a strong exact-class allow for VirtualShippingBridge. The restarted server loaded the class and registered the inventory=54 scheduler successfully."
+    "KubeJS denies the com.sun prefix, so the package allow was replaced by a strong exact-class allow for VirtualShippingBridge. The restarted server loaded the class and registered the inventory=54 scheduler successfully.",
+    "The disappearing menu was caused by a scheduler exception logger calling Rhino ConsoleJS.error with two arguments, leaving the owner record in PLANNING. Logging now uses one string argument, and menu acquisition safely reclaims an abandoned PLANNING token before opening."
   ]
 }
