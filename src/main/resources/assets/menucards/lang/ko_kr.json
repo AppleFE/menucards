@@ -8,9 +8,34 @@
     "menucards.lore.help": "운영자를 호출합니다",
     "menucards.lore.skull_cave": "해골 광산으로 이동합니다",
 
-    "menucards.action.town_home": "마을 홈으로 이동합니다 (준비 중)",
-    "menucards.action.spawn": "스폰으로 이동합니다 (준비 중)",
-    "menucards.action.sell": "배송 상자를 오픈합니다 (준비 중)",
-    "menucards.action.help": "운영자를 호출합니다 (준비 중)",
-    "menucards.action.skull_cave": "해골 광산으로 이동합니다 (준비 중)"
+    "menucards.action.town_home": "마을 홈으로 이동합니다",
+    "menucards.action.spawn": "스폰으로 이동합니다",
+    "menucards.action.sell": "배송 상자를 엽니다",
+    "menucards.action.help": "운영자를 호출합니다",
+    "menucards.action.skull_cave": "해골 광산으로 이동합니다",
+
+    "menucards.action.town_home.success": "마을 홈으로 이동했습니다.",
+    "menucards.action.town_home.failure": "마을 홈을 사용할 수 없습니다.",
+    "menucards.action.spawn.success": "스폰으로 이동했습니다.",
+    "menucards.action.spawn.not_configured": "스폰 위치가 설정되지 않았습니다.",
+    "menucards.action.spawn.unsafe": "현재 스폰 위치가 안전하지 않습니다.",
+    "menucards.action.shipping.opened": "배송 상자를 열었습니다.",
+    "menucards.action.help.sent": "도움 요청을 전송했습니다.",
+    "menucards.action.help.cooldown": "도움 요청을 다시 보내기 전에 잠시 기다려 주세요.",
+    "menucards.action.help.rate_limited": "도움 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+    "menucards.action.skull_cave.success": "해골 광산으로 이동했습니다.",
+    "menucards.action.skull_cave.failure": "해골 광산을 사용할 수 없습니다.",
+
+    "menucards.command.permission_denied": "이 명령어를 사용할 권한이 없습니다.",
+    "menucards.command.spawn.set": "스폰 위치를 설정했습니다.",
+    "menucards.command.spawn.cleared": "스폰 위치를 초기화했습니다.",
+    "menucards.command.spawn.invalid_dimension": "해당 차원을 사용할 수 없습니다.",
+    "menucards.command.shipping.recovered": "배송 판매 데이터를 복구했습니다.",
+
+    "menucards.shipping.recovery.requeued": "대기 중인 판매를 안전하게 다시 등록했습니다.",
+    "menucards.shipping.recovery.quarantined": "대기 중인 판매에 운영자 확인이 필요합니다.",
+    "menucards.shipping.failure.planning": "판매 계획을 처리할 수 없습니다.",
+    "menucards.shipping.failure.applying": "판매를 안전하게 적용할 수 없습니다.",
+    "menucards.shipping.failure.policy": "배송 정책에 따라 판매가 거부되었습니다.",
+    "menucards.shipping.failure.removal": "판매를 안전하게 완료할 수 없습니다."
 }

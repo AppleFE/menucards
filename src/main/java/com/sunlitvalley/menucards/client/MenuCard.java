@@ -17,7 +17,7 @@ public enum MenuCard {
     MenuCard(String id, int sortIndex) {
         this.id = id;
         this.sortIndex = sortIndex;
-        this.texture = new ResourceLocation("menucards", "textures/gui/" + id + ".png");
+        this.texture = ResourceLocation.fromNamespaceAndPath("menucards", "textures/gui/" + id + ".png");
         this.loreKey = "menucards.lore." + id;
     }
 

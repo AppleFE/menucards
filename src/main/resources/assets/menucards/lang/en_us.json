@@ -8,9 +8,34 @@
     "menucards.lore.help": "Call Admin",
     "menucards.lore.skull_cave": "Teleport to Skull Mine",
 
-    "menucards.action.town_home": "Teleporting to Town Home (coming soon)",
-    "menucards.action.spawn": "Teleporting to Spawn (coming soon)",
-    "menucards.action.sell": "Opening Shipping Box (coming soon)",
-    "menucards.action.help": "Calling Admin (coming soon)",
-    "menucards.action.skull_cave": "Teleporting to Skull Mine (coming soon)"
+    "menucards.action.town_home": "Teleporting to Town Home",
+    "menucards.action.spawn": "Teleporting to Spawn",
+    "menucards.action.sell": "Opening Shipping Box",
+    "menucards.action.help": "Calling Admin",
+    "menucards.action.skull_cave": "Teleporting to Skull Mine",
+
+    "menucards.action.town_home.success": "Teleported to Town Home.",
+    "menucards.action.town_home.failure": "Town Home is unavailable.",
+    "menucards.action.spawn.success": "Teleported to Spawn.",
+    "menucards.action.spawn.not_configured": "Spawn has not been configured.",
+    "menucards.action.spawn.unsafe": "Spawn is currently unsafe.",
+    "menucards.action.shipping.opened": "Opened your Shipping Box.",
+    "menucards.action.help.sent": "Your help request was sent.",
+    "menucards.action.help.cooldown": "Please wait before sending another help request.",
+    "menucards.action.help.rate_limited": "Too many help requests are active. Please try again later.",
+    "menucards.action.skull_cave.success": "Teleported to Skull Mine.",
+    "menucards.action.skull_cave.failure": "Skull Mine is unavailable.",
+
+    "menucards.command.permission_denied": "You do not have permission to use this command.",
+    "menucards.command.spawn.set": "Spawn location set.",
+    "menucards.command.spawn.cleared": "Spawn location cleared.",
+    "menucards.command.spawn.invalid_dimension": "That dimension is not available.",
+    "menucards.command.shipping.recovered": "Recovered shipping sale data.",
+
+    "menucards.shipping.recovery.requeued": "Your pending sale was safely requeued.",
+    "menucards.shipping.recovery.quarantined": "Your pending sale needs administrator review.",
+    "menucards.shipping.failure.planning": "Your sale plan could not be processed.",
+    "menucards.shipping.failure.applying": "Your sale could not be applied safely.",
+    "menucards.shipping.failure.policy": "Your sale was rejected by the shipping policy.",
+    "menucards.shipping.failure.removal": "Your sale could not be completed safely."
 }

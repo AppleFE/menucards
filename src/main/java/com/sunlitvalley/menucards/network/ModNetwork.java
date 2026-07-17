@@ -8,7 +8,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 public class ModNetwork {
     private static final String PROTOCOL_VERSION = "1";
     public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
-        .named(new ResourceLocation(MenuCardsMod.MOD_ID, "main"))
+        .named(ResourceLocation.fromNamespaceAndPath(MenuCardsMod.MOD_ID, "main"))
         .networkProtocolVersion(() -> PROTOCOL_VERSION)
         .clientAcceptedVersions(PROTOCOL_VERSION::equals)
         .serverAcceptedVersions(PROTOCOL_VERSION::equals)

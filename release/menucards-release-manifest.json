@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "releaseUtc": "2026-07-17T14:14:48Z",
+  "target": {
+    "minecraft": "1.20.1",
+    "forge": "47.4.0",
+    "modVersion": "1.0.0"
+  },
+  "approvedPlan": {
+    "path": ".gjc/_session-019f6bbc-e9c4-7000-9363-369b77bf62c6/plans/ralplan/019f6bbc-e9c4-7000-9363-369b77bf62c6/stage-05-final.md",
+    "sha256": "113e817a1533d180583261988600fc7a18f0bf54ba9effe321881d2bc9b4cefe"
+  },
+  "artifacts": {
+    "jar": {
+      "source": "build/libs/menucards-1.0.0.jar",
+      "deployedPath": "mods/menucards-1.0.0.jar",
+      "sha256": "8277475e4b11645e5634b2d52bce5f18de1c02c6f7ec3c80036ed09009203bba",
+      "entryCount": 89,
+      "forbiddenEntries": [],
+      "testFailpointPropertySymbolAbsent": true
+    },
+    "policyScript": {
+      "source": "deploy/kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
+      "deployedPath": "kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
+      "sha256": "2fdc292c6c6331e6d8ceb6159b90152b7f3a94e00e1f9230c055cd1ab3d6537d"
+    },
+    "schedulerScript": {
+      "source": "deploy/kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js",
+      "deployedPath": "kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js",
+      "sha256": "44e72d386a68e26502ab1eca43c020c460386ab75f0bbfb433d53e5410602bb4"
+    }
+  },
+  "deployment": {
+    "status": "staged-for-next-restart",
+    "backupPath": "backups/menucards/20260717T141448Z",
+    "restartRequired": true,
+    "serverRestarted": false,
+    "previousHashes": {
+      "mods/menucards-1.0.0.jar": "11d551fc49acdd8906dacc32eb80bedab7d93c3c56383c0617427f756cd563e6",
+      "kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js": "6c596c6a6d2e429cdd074aa9e7b97b42d3c0b74ee923eb58e687ba7977f1ef78",
+      "kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js": "87be151fbd64e27d85907cf6dc89f1aa6375cee397e879572e8f472231991ec1"
+    },
+    "liveServer": {
+      "pid": 25700,
+      "process": "java.exe",
+      "remainedRunningDuringStaging": true,
+      "postStageLogActivityObserved": true
+    }
+  },
+  "contracts": {
+    "defaultKey": "SHIFT+E",
+    "author": "AppleFE",
+    "spawnAuthority": "online PlayerList.isOp",
+    "shippingSchemaVersion": 3,
+    "fingerprintEncodingVersion": 2,
+    "shippingAbi": "two private zero-based 27-slot sides with $extractStack and no $remove",
+    "terminalQuarantine": "force-saved and first reason idempotent",
+    "economyIntent": "immutable persisted debt and bank CAS terms",
+    "skullDestination": "society:skull_cavern origin column highest safe block"
+  },
+  "verification": {
+    "unit": {
+      "tests": 19,
+      "failures": 0,
+      "errors": 0
+    },
+    "gameTest": {
+      "tests": 21,
+      "status": "passed"
+    },
+    "nodeSyntax": "passed",
+    "nodePolicyQa": "passed",
+    "rhinoSyntax": "passed",
+    "rhinoRuntime": "passed",
+    "gradleBuild": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "reviewReceipts": {
+    "shippingArchitect": "agent://94-ArchShippingTerminal",
+    "packageArchitect": "agent://88-ArchPackageRelease",
+    "actionsArchitect": "agent://87-ArchActionsRelease",
+    "menuArchitect": "agent://86-ArchMenuRelease",
+    "shippingQa": "agent://91-QaShippingEvidenceFinal",
+    "actionsQa": "agent://92-QaActionsEvidenceFinal",
+    "status": "CLEAR_APPROVE_PASSED"
+  },
+  "runtimeDependencies": {
+    "mods/society-chunkyclaim-1.0.0.jar": "f90e0e69bd9a2c4aeccc8e7500d5bd32de5d12e22ae71088e066adcdce7ed6ba",
+    "mods/ShippingBin-forge-1.20.1-4.jar": "b44b2d73840a1e94ef6e75763548f473903db2294f725dabb5562a5c039b2444"
+  },
+  "unchangedGlobalHelpers": {
+    "kubejs/startup_scripts/globalRegistry.js": "19434067ded915094818046f3c9100d2cd53868f91f3b6a60736af7416e8fa59",
+    "kubejs/startup_scripts/globalBlockEntityHandlers.js": "9b169ddff1332a58074f07254d0d35fdc2fcc20f1c8866ff4c4a342a42e4b679",
+    "kubejs/startup_scripts/globalShippingBinHandlers.js": "89d3e854073ffe38dfac75657363ca4f0838bc40a3510ccc66a69bdb81fab26e"
+  },
+  "incidentNotes": [
+    "The earlier production parser failure caused by unsupported destructured-arrow syntax was corrected.",
+    "Production artifacts were replaced atomically per file while the existing server process remained running; activation requires the next controlled restart."
+  ]
+}
