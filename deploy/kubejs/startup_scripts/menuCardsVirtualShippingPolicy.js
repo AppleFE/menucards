@@ -63,12 +63,7 @@ global.planVirtualShipping = (lease, server) => {
   });
   const stackItem = (stack) => stack.item || stack.getItem();
   const stackCount = (stack) => (stack.count === undefined ? stack.getCount() : stack.count);
-  const stackNbt = (stack) =>
-    stack.hasNBT && stack.hasNBT()
-      ? stack.nbt
-      : stack.hasTag && stack.hasTag()
-        ? stack.getTag()
-        : undefined;
+  const stackNbt = (stack) => stack.nbt;
   const stackHasTag = (stack, tag) => Item.of(stack).hasTag(tag);
 
   for (var slot = 0; slot < 54; slot++) {

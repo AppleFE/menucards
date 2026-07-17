@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseUtc": "2026-07-17T19:59:18.521500Z",
+  "releaseUtc": "2026-07-17T20:17:04.045179Z",
   "target": {
     "minecraft": "1.20.1",
     "forge": "47.4.0",
@@ -22,7 +22,7 @@
     "policyScript": {
       "source": "deploy/kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
       "deployedPath": "kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
-      "sha256": "fc9365bc2cd22d2793c2569067f0b04fa1a756ffed556516c55e492d1d340f7b"
+      "sha256": "ab7c8a6da447017356c806c05d46a7857c2703df290c59e5b8128f91920a22c6"
     },
     "schedulerScript": {
       "source": "deploy/kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js",
@@ -38,7 +38,8 @@
       "backups/menucards/20260717T161644Z",
       "backups/menucards/20260717T193119Z",
       "backups/menucards/20260717T193329Z",
-      "backups/menucards/20260717T195910Z"
+      "backups/menucards/20260717T195910Z",
+      "backups/menucards/20260717T201655Z"
     ],
     "restartRequired": true,
     "serverRestartedWithFinalPlugin": true,
@@ -75,7 +76,7 @@
     "nodePolicyQa": "passed",
     "gradleBuild": "passed",
     "gitDiffCheck": "passed",
-    "runtimeActivation": "pending restart for Rhino loop-scope policy fix"
+    "runtimeActivation": "pending restart for direct ItemStack.nbt policy access"
   },
   "reviewReceipts": {
     "shippingArchitect": "agent://104-ArchSmartBinRelease",
@@ -88,6 +89,7 @@
     "All 54 private persisted slots participate in sale planning and exactly-once compensation.",
     "KubeJS denies the com.sun prefix, so the package allow was replaced by a strong exact-class allow for VirtualShippingBridge. The restarted server loaded the class and registered the inventory=54 scheduler successfully.",
     "The disappearing menu was caused by a scheduler exception logger calling Rhino ConsoleJS.error with two arguments, leaving the owner record in PLANNING. Logging now uses one string argument, and menu acquisition safely reclaims an abandoned PLANNING token before opening.",
-    "Sales were retrying every five minutes but Rhino rejected block-scoped declarations inside the 54-slot loop as redeclarations. Loop-local declarations now use function-scoped var bindings compatible with the production Rhino runtime."
+    "Sales were retrying every five minutes but Rhino rejected block-scoped declarations inside the 54-slot loop as redeclarations. Loop-local declarations now use function-scoped var bindings compatible with the production Rhino runtime.",
+    "The production ItemStack wrapper does not provide a zero-argument hasNBT/hasTag method. Sale planning now reads the established KubeJS stack.nbt property directly."
   ]
 }
