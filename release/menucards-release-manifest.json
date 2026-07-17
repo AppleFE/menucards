@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseUtc": "2026-07-17T14:14:48Z",
+  "releaseUtc": "2026-07-17T15:05:04Z",
   "target": {
     "minecraft": "1.20.1",
     "forge": "47.4.0",
@@ -14,7 +14,7 @@
     "jar": {
       "source": "build/libs/menucards-1.0.0.jar",
       "deployedPath": "mods/menucards-1.0.0.jar",
-      "sha256": "8277475e4b11645e5634b2d52bce5f18de1c02c6f7ec3c80036ed09009203bba",
+      "sha256": "df0767d137c74a22cba761538f171f02a1dae4bb01aab3aa2c921050f7fac7b9",
       "entryCount": 89,
       "forbiddenEntries": [],
       "testFailpointPropertySymbolAbsent": true
@@ -32,16 +32,15 @@
   },
   "deployment": {
     "status": "staged-for-next-restart",
-    "backupPath": "backups/menucards/20260717T141448Z",
+    "backupPath": "backups/menucards/20260717T150504Z",
+    "priorDeploymentBackupPath": "backups/menucards/20260717T141448Z",
     "restartRequired": true,
     "serverRestarted": false,
     "previousHashes": {
-      "mods/menucards-1.0.0.jar": "11d551fc49acdd8906dacc32eb80bedab7d93c3c56383c0617427f756cd563e6",
-      "kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js": "6c596c6a6d2e429cdd074aa9e7b97b42d3c0b74ee923eb58e687ba7977f1ef78",
-      "kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js": "87be151fbd64e27d85907cf6dc89f1aa6375cee397e879572e8f472231991ec1"
+      "mods/menucards-1.0.0.jar": "8277475e4b11645e5634b2d52bce5f18de1c02c6f7ec3c80036ed09009203bba"
     },
     "liveServer": {
-      "pid": 25700,
+      "pid": 25296,
       "process": "java.exe",
       "remainedRunningDuringStaging": true,
       "postStageLogActivityObserved": true
@@ -51,6 +50,7 @@
     "defaultKey": "SHIFT+E",
     "author": "AppleFE",
     "spawnAuthority": "online PlayerList.isOp",
+    "teleportCooldown": "none for spawn, town home, and skull cavern; shipping keeps only its independent duplicate-open guard",
     "shippingSchemaVersion": 3,
     "fingerprintEncodingVersion": 2,
     "shippingAbi": "two private zero-based 27-slot sides with $extractStack and no $remove",
@@ -95,6 +95,7 @@
   },
   "incidentNotes": [
     "The earlier production parser failure caused by unsupported destructured-arrow syntax was corrected.",
-    "Production artifacts were replaced atomically per file while the existing server process remained running; activation requires the next controlled restart."
+    "Production artifacts were replaced atomically per file while the existing server process remained running; activation requires the next controlled restart.",
+    "The follow-up removes the shared 100-tick teleport cooldown that intermittently discarded spawn, town-home, and skull-cavern menu actions."
   ]
 }
