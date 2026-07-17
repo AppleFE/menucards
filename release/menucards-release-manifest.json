@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseUtc": "2026-07-17T20:17:04.045179Z",
+  "releaseUtc": "2026-07-17T20:38:02.5226578Z",
   "target": {
     "minecraft": "1.20.1",
     "forge": "47.4.0",
@@ -22,7 +22,7 @@
     "policyScript": {
       "source": "deploy/kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
       "deployedPath": "kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
-      "sha256": "ab7c8a6da447017356c806c05d46a7857c2703df290c59e5b8128f91920a22c6"
+      "sha256": "29518ba403d282fbd81568882f2d944cf5dcbbf8f45f07c450f7473064e9f70b"
     },
     "schedulerScript": {
       "source": "deploy/kubejs/server_scripts/playerEvents/menuCardsVirtualShipping.js",
@@ -31,7 +31,7 @@
     }
   },
   "deployment": {
-    "status": "policy-staged-restart-required",
+    "status": "active-online-sale-canary-pending",
     "backupPaths": [
       "backups/menucards/20260717T155526Z",
       "backups/menucards/20260717T160120Z",
@@ -39,16 +39,17 @@
       "backups/menucards/20260717T193119Z",
       "backups/menucards/20260717T193329Z",
       "backups/menucards/20260717T195910Z",
-      "backups/menucards/20260717T201655Z"
+      "backups/menucards/20260717T201655Z",
+      "backups/menucards/20260717T203636Z"
     ],
-    "restartRequired": true,
+    "restartRequired": false,
     "serverRestartedWithFinalPlugin": true,
     "liveServer": {
-      "pid": 36488,
+      "pid": 25908,
       "process": "java.exe",
       "runtimeVerified": true
     },
-    "runtimeActivationEvidence": "logs/latest.log:3548-3549 scheduler registered; line 4455 server Done"
+    "runtimeActivationEvidence": "logs/latest.log:1187 final startup policy loaded; lines 3565-3568 bridge and inventory=54 scheduler registered; line 4530 server Done"
   },
   "contracts": {
     "defaultKey": "SHIFT+E",
@@ -76,13 +77,13 @@
     "nodePolicyQa": "passed",
     "gradleBuild": "passed",
     "gitDiffCheck": "passed",
-    "runtimeActivation": "pending restart for direct ItemStack.nbt policy access"
+    "runtimeActivation": "final Rhino-safe policy active; online-owner sale canary pending"
   },
   "reviewReceipts": {
     "shippingArchitect": "agent://104-ArchSmartBinRelease",
     "shippingQa": "agent://105-ExecSmartBinRelease",
     "kubeJsQa": "agent://107-ExecKubeJsBridge",
-    "status": "SOURCE_TESTS_PASSED_RUNTIME_RESTART_PENDING"
+    "status": "SOURCE_TESTS_PASSED_RUNTIME_ACTIVE_ONLINE_SALE_PENDING"
   },
   "incidentNotes": [
     "The menu now opens the real smart shipping bin as a vanilla six-row chest instead of ShippingBin v4 Inputs/Profits UI.",
@@ -90,6 +91,7 @@
     "KubeJS denies the com.sun prefix, so the package allow was replaced by a strong exact-class allow for VirtualShippingBridge. The restarted server loaded the class and registered the inventory=54 scheduler successfully.",
     "The disappearing menu was caused by a scheduler exception logger calling Rhino ConsoleJS.error with two arguments, leaving the owner record in PLANNING. Logging now uses one string argument, and menu acquisition safely reclaims an abandoned PLANNING token before opening.",
     "Sales were retrying every five minutes but Rhino rejected block-scoped declarations inside the 54-slot loop as redeclarations. Loop-local declarations now use function-scoped var bindings compatible with the production Rhino runtime.",
-    "The production ItemStack wrapper does not provide a zero-argument hasNBT/hasTag method. Sale planning now reads the established KubeJS stack.nbt property directly."
+    "The production ItemStack wrapper does not provide a zero-argument hasNBT/hasTag method. Sale planning now reads the established KubeJS stack.nbt property directly.",
+    "The quality-perk multiplier comparison now normalizes the KubeJS value with String before JavaScript equality; direct-NBT, slot-53, offline-gate, and distinct-cycle policy QA cases pass."
   ]
 }

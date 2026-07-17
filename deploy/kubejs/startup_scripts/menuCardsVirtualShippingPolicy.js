@@ -91,7 +91,7 @@ global.planVirtualShipping = (lease, server) => {
       quality &&
       quality > 0 &&
       stages.includes("the_quality_of_the_earth") &&
-      trade.multiplier.equals("shippingbin:crop_sell_multiplier") &&
+      String(trade.multiplier) === "shippingbin:crop_sell_multiplier" &&
       !Item.of(item).hasTag("minecraft:fishes");
     var itemValue = calculateQualityValue(trade.value, quality, doubleQuality);
     if (!Number.isFinite(itemValue) || itemValue < 0) throw new Error("ITEM_VALUE_INVALID");
