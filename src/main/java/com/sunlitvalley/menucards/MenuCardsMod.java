@@ -14,6 +14,7 @@ public class MenuCardsMod {
 
     public MenuCardsMod() {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
+        ModSounds.SOUND_EVENTS.register(modBus);
         MinecraftForge.EVENT_BUS.addListener(MenuCardsServerEvents::onRegisterCommands);
         MinecraftForge.EVENT_BUS.addListener(MenuCardsServerEvents::onPlayerLogout);
         MinecraftForge.EVENT_BUS.addListener(MenuCardsServerEvents::onPlayerDeath);

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseUtc": "2026-07-18T06:30:02.5436656Z",
+  "releaseUtc": "2026-07-18T08:28:58Z",
   "target": {
     "minecraft": "1.20.1",
     "forge": "47.4.0",
@@ -13,11 +13,20 @@
   "artifacts": {
     "jar": {
       "source": "build/libs/menucards-1.0.0.jar",
-      "sourceSha256": "5a7a153ddf7881824a923dfd883fee46e79fe0d8c76e6bb0b582c90d61c40fc1",
+      "sourceSha256": "ec972c98c08f31eac7c8439e67518903e77f44814b0bf8065d44e3f5fddde4ab",
       "deployedPath": "mods/menucards-1.0.0.jar",
-      "deployedSha256": "5a7a153ddf7881824a923dfd883fee46e79fe0d8c76e6bb0b582c90d61c40fc1",
-      "entryCount": 93,
+      "deployedSha256": "ec972c98c08f31eac7c8439e67518903e77f44814b0bf8065d44e3f5fddde4ab",
+      "entryCount": 98,
       "kubeJsPlugin": "com.sunlitvalley.menucards.integration.shipping.MenuCardsKubeJSPlugin"
+    },
+    "interactionSound": {
+      "source": "user-supplied MO_FN_foley_ui_deselect_sfx.wav",
+      "packagedPath": "assets/menucards/sounds/menu_card_interaction.ogg",
+      "sha256": "9264ba809b8156eec2697c566ac755bce63a7acc8d89d039c32322a7eb6debd0",
+      "codec": "vorbis",
+      "sampleRate": 44100,
+      "channels": 1,
+      "durationSeconds": 0.152676
     },
     "policyScript": {
       "source": "deploy/kubejs/startup_scripts/menuCardsVirtualShippingPolicy.js",
@@ -31,7 +40,7 @@
     }
   },
   "deployment": {
-    "status": "runtime-verified",
+    "status": "staged-client-update",
     "backupPaths": [
       "backups/menucards/20260717T155526Z",
       "backups/menucards/20260717T160120Z",
@@ -41,16 +50,16 @@
       "backups/menucards/20260717T195910Z",
       "backups/menucards/20260717T201655Z",
       "backups/menucards/20260717T203636Z",
-      "backups/menucards/20260718T062114Z"
+      "backups/menucards/20260718T062114Z",
+      "backups/menucards/20260718T082858Z"
     ],
-    "restartRequired": false,
-    "serverRestartedWithFinalPlugin": true,
+    "restartRequired": true,
+    "serverRestartedWithFinalPlugin": false,
     "liveServer": {
-      "pid": 13828,
-      "process": "java.exe",
-      "runtimeVerified": true
+      "pid": null,
+      "runtimeVerified": false
     },
-    "runtimeActivationEvidence": "logs/latest.log:1394 receipt-safe startup policy loaded; lines 3640-3643 bridge and inventory=54 scheduler registered; line 4536 server Done"
+    "runtimeActivationEvidence": "Updated jar is staged with matching source/deployed SHA-256; client hover/click sound activates on the next server-pack/client launch."
   },
   "contracts": {
     "defaultKey": "SHIFT+E",
@@ -66,7 +75,7 @@
   },
   "verification": {
     "unit": {
-      "tests": 20,
+      "tests": 21,
       "failures": 0,
       "errors": 0
     },
@@ -78,7 +87,13 @@
     "nodePolicyQa": "passed",
     "gradleBuild": "passed",
     "gitDiffCheck": "passed",
-    "runtimeActivation": "passed",
+    "uiInteractionSound": {
+      "hoverEdgeTest": "passed",
+      "clickHookCompile": "passed",
+      "oggDecode": "passed",
+      "jarResources": "passed"
+    },
+    "runtimeActivation": "pending-restart",
     "liveSaleCanary": {
       "owner": "67f5009b-0aaa-4686-ae5a-37165171950c",
       "loginLocal": "2026-07-18T15:24:16+09:00",
@@ -110,6 +125,7 @@
     "The production ItemStack wrapper does not provide a zero-argument hasNBT/hasTag method. Sale planning now reads the established KubeJS stack.nbt property directly.",
     "The quality-perk multiplier comparison now normalizes the KubeJS value with String before JavaScript equality; direct-NBT, slot-53, offline-gate, and distinct-cycle policy QA cases pass.",
     "The live debt-payment branch exposed Rhino block-const reuse for receipt; it now uses a function-scoped uniquely named variable and reads receipt NBT through the proven property surface.",
-    "The production canary sold 64 cooked porkchops for 3,072, reduced debt from 20,992 to 17,920 exactly once, emitted one receipt, returned to clean IDLE, and scheduled the next cycle."
+    "The production canary sold 64 cooked porkchops for 3,072, reduced debt from 20,992 to 17,920 exactly once, emitted one receipt, returned to clean IDLE, and scheduled the next cycle.",
+    "Menu card hover entry and successful left-click now play the supplied UI sound at distinct pitch and volume; hover playback is edge-triggered to prevent per-frame repetition."
   ]
 }

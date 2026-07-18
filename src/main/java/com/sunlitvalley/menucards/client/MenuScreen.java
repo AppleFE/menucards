@@ -1,11 +1,14 @@
 package com.sunlitvalley.menucards.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.sunlitvalley.menucards.ModSounds;
 import com.sunlitvalley.menucards.network.CardActionC2SPacket;
 import com.sunlitvalley.menucards.network.ModNetwork;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +29,7 @@ public class MenuScreen extends Screen {
     private int totalRowWidth;
 
     private final HoverState[] hoverStates;
+    private final HoverSoundTracker hoverSoundTracker = new HoverSoundTracker();
     private final List<Rect> currentBounds = new ArrayList<>();
     private double[] currentAlphas = new double[0];
     private boolean initialized = false;
@@ -127,6 +131,12 @@ public class MenuScreen extends Screen {
             }
         }
 
+        int interactiveHoveredIndex =
+                hoveredIndex >= 0 && alphas[hoveredIndex] > 0.5 ? hoveredIndex : -1;
+        if (hoverSoundTracker.update(interactiveHoveredIndex)) {
+            playInteractionSound(1.15f, 0.5f);
+        }
+
         // Update hover states with correct hovered index
         for (int i = 0; i < cards.length; i++) {
             hoverStates[i].update(i == hoveredIndex, dt);
@@ -195,6 +205,7 @@ public class MenuScreen extends Screen {
                 if (currentBounds.get(i).contains((int) mouseX, (int) mouseY)
                         && i < currentAlphas.length && currentAlphas[i] > 0.5) {
                     MenuCard card = MenuCard.values()[i];
+                    playInteractionSound(0.9f, 0.8f);
                     ModNetwork.sendToServer(new CardActionC2SPacket(card.getId()));
                     this.onClose();
                     return true;
@@ -202,6 +213,11 @@ public class MenuScreen extends Screen {
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private void playInteractionSound(float pitch, float volume) {
+        Minecraft.getInstance().getSoundManager().play(
+                SimpleSoundInstance.forUI(ModSounds.MENU_CARD_INTERACTION.get(), pitch, volume));
     }
 
     @Override
