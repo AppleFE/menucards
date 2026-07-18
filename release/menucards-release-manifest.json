@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseUtc": "2026-07-18T06:23:33.4900003Z",
+  "releaseUtc": "2026-07-18T06:30:02.5436656Z",
   "target": {
     "minecraft": "1.20.1",
     "forge": "47.4.0",
@@ -31,7 +31,7 @@
     }
   },
   "deployment": {
-    "status": "active-online-sale-canary-pending",
+    "status": "runtime-verified",
     "backupPaths": [
       "backups/menucards/20260717T155526Z",
       "backups/menucards/20260717T160120Z",
@@ -78,13 +78,28 @@
     "nodePolicyQa": "passed",
     "gradleBuild": "passed",
     "gitDiffCheck": "passed",
-    "runtimeActivation": "receipt-safe Rhino policy active; owner reconnect sale canary pending"
+    "runtimeActivation": "passed",
+    "liveSaleCanary": {
+      "owner": "67f5009b-0aaa-4686-ae5a-37165171950c",
+      "loginLocal": "2026-07-18T15:24:16+09:00",
+      "input": "64 minecraft:cooked_porkchop sold and replaced by one debt-payment receipt",
+      "debtBefore": 20992,
+      "debtPaid": 3072,
+      "debtAfter": 17920,
+      "state": "IDLE",
+      "reason": null,
+      "nextSaleGameTime": 4693890,
+      "duplicateSuppression": "debt and deadline remained unchanged after later player inventory edits",
+      "status": "passed"
+    }
   },
   "reviewReceipts": {
     "shippingArchitect": "agent://104-ArchSmartBinRelease",
     "shippingQa": "agent://105-ExecSmartBinRelease",
     "kubeJsQa": "agent://107-ExecKubeJsBridge",
-    "status": "SOURCE_TESTS_PASSED_RUNTIME_ACTIVE_OWNER_RECONNECT_PENDING"
+    "canaryArchitect": "agent://114-ArchLiveSaleCanary",
+    "canaryQa": "agent://115-QaLiveSaleCanary",
+    "status": "PASSED"
   },
   "incidentNotes": [
     "The menu now opens the real smart shipping bin as a vanilla six-row chest instead of ShippingBin v4 Inputs/Profits UI.",
@@ -94,6 +109,7 @@
     "Sales were retrying every five minutes but Rhino rejected block-scoped declarations inside the 54-slot loop as redeclarations. Loop-local declarations now use function-scoped var bindings compatible with the production Rhino runtime.",
     "The production ItemStack wrapper does not provide a zero-argument hasNBT/hasTag method. Sale planning now reads the established KubeJS stack.nbt property directly.",
     "The quality-perk multiplier comparison now normalizes the KubeJS value with String before JavaScript equality; direct-NBT, slot-53, offline-gate, and distinct-cycle policy QA cases pass.",
-    "The live debt-payment branch exposed Rhino block-const reuse for receipt; it now uses a function-scoped uniquely named variable and reads receipt NBT through the proven property surface."
+    "The live debt-payment branch exposed Rhino block-const reuse for receipt; it now uses a function-scoped uniquely named variable and reads receipt NBT through the proven property surface.",
+    "The production canary sold 64 cooked porkchops for 3,072, reduced debt from 20,992 to 17,920 exactly once, emitted one receipt, returned to clean IDLE, and scheduled the next cycle."
   ]
 }
