@@ -193,7 +193,7 @@ global.planVirtualShipping = (lease, server) => {
     });
   }
   if (debtPaid > 0) {
-    const receipt = global.getNotePaperItem(
+    var debtReceipt = global.getNotePaperItem(
       global.translatableWithFallback(
         "society.hospital_receipt.author",
         "Sunlit Valley Hospital"
@@ -210,8 +210,8 @@ global.planVirtualShipping = (lease, server) => {
       ).getString()
     );
     receipts.push({
-      item: String(receipt.item.id),
-      snbt: receipt.hasNBT() ? String(receipt.nbt) : "{}",
+      item: String(debtReceipt.item.id),
+      snbt: debtReceipt.nbt ? String(debtReceipt.nbt) : "{}",
       count: 1,
     });
   }
