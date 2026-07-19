@@ -46,6 +46,27 @@ public final class MenuCardActionsGameTests {
     }
 
     @GameTest(templateNamespace = "menucards", template = "menucardsgametests.empty", timeoutTicks = 20)
+    public static void teleportCountdownAllowsLookingButRejectsMovement(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        ServerPlayer player = mockServerPlayer(level);
+        Vec3 start = player.position();
+
+        player.setYRot(player.getYRot() + 90.0F);
+        player.setXRot(45.0F);
+        helper.assertTrue(!TeleportCountdown.positionChanged(level.dimension(), start, player),
+                "Looking around must not cancel a teleport countdown");
+
+        player.setPos(start.add(0.01D, 0.0D, 0.0D));
+        helper.assertTrue(TeleportCountdown.positionChanged(level.dimension(), start, player),
+                "Changing position must cancel a teleport countdown");
+        helper.assertTrue(TeleportCountdown.remainingSeconds(0L) == 5
+                        && TeleportCountdown.remainingSeconds(20L) == 4
+                        && TeleportCountdown.remainingSeconds(80L) == 1,
+                "The teleport countdown must display five through one seconds");
+        helper.succeed();
+    }
+
+    @GameTest(templateNamespace = "menucards", template = "menucardsgametests.empty", timeoutTicks = 20)
     public static void skullCavernResolverRevalidatesHighestSafeCache(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         ServerPlayer player = mockServerPlayer(level);

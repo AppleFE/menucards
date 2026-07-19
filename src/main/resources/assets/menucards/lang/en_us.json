@@ -26,6 +26,13 @@
     "menucards.action.skull_cave.success": "Teleported to Skull Mine.",
     "menucards.action.skull_cave.failure": "Skull Mine is unavailable.",
 
+    "menucards.destination.town_home": "Town Home",
+    "menucards.destination.spawn": "Spawn",
+    "menucards.teleport.countdown": "%1$s in %2$s seconds · Do not move!",
+    "menucards.teleport.cancelled_moved": "Teleport cancelled because you moved. Stay still and try again.",
+    "menucards.teleport.success": "Teleported.",
+    "menucards.teleport.failure": "Unable to teleport.",
+
     "menucards.command.permission_denied": "You do not have permission to use this command.",
     "menucards.command.spawn.set": "Spawn location set.",
     "menucards.command.spawn.cleared": "Spawn location cleared.",

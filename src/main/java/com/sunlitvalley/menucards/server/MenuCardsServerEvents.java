@@ -33,6 +33,8 @@ public final class MenuCardsServerEvents {
         if (event.getEntity() instanceof ServerPlayer player) {
             runCleanup("release virtual shipping menu for " + player.getUUID(),
                     () -> ShippingBinMenuIntegration.release(player));
+            runCleanup("clear action state for " + player.getUUID(),
+                    () -> ServerActionHandler.clearRuntimeState(player.getUUID()));
         }
     }
 
@@ -40,6 +42,8 @@ public final class MenuCardsServerEvents {
         if (event.getOriginal() instanceof ServerPlayer player) {
             runCleanup("release virtual shipping menu for " + player.getUUID(),
                     () -> ShippingBinMenuIntegration.release(player));
+            runCleanup("clear action state for " + player.getUUID(),
+                    () -> ServerActionHandler.clearRuntimeState(player.getUUID()));
         }
     }
 

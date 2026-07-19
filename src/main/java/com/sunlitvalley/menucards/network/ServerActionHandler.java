@@ -2,6 +2,7 @@ package com.sunlitvalley.menucards.network;
 
 import com.sunlitvalley.menucards.CardIds;
 import com.sunlitvalley.menucards.server.MenuCardActions;
+import com.sunlitvalley.menucards.server.TeleportCountdown;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,8 +33,7 @@ public final class ServerActionHandler {
         }
 
         switch (cardId) {
-            case CardIds.TOWN_HOME -> MenuCardActions.townHome(player);
-            case CardIds.SPAWN -> MenuCardActions.spawn(player);
+            case CardIds.TOWN_HOME, CardIds.SPAWN -> TeleportCountdown.begin(player, cardId);
             case CardIds.SELL -> {
                 if (allow(LAST_SHIPPING_ACTION, player, player.getServer().overworld().getGameTime(),
                         SHIPPING_COOLDOWN_TICKS)) {
@@ -57,9 +57,11 @@ public final class ServerActionHandler {
 
     public static void clearRuntimeState(UUID playerId) {
         LAST_SHIPPING_ACTION.remove(playerId);
+        TeleportCountdown.clear(playerId);
     }
     public static void clearRuntimeState() {
         LAST_SHIPPING_ACTION.clear();
+        TeleportCountdown.clear();
         MenuCardActions.clearRuntimeState();
     }
 }

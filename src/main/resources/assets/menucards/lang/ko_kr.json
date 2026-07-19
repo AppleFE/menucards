@@ -26,6 +26,13 @@
     "menucards.action.skull_cave.success": "해골 광산으로 이동했습니다.",
     "menucards.action.skull_cave.failure": "해골 광산을 사용할 수 없습니다.",
 
+    "menucards.destination.town_home": "마을 홈",
+    "menucards.destination.spawn": "스폰",
+    "menucards.teleport.countdown": "%1$s 이동까지 %2$s초 · 움직이지 마세요!",
+    "menucards.teleport.cancelled_moved": "움직여서 이동이 취소되었습니다. 움직이지 말고 다시 시도하세요.",
+    "menucards.teleport.success": "이동했습니다.",
+    "menucards.teleport.failure": "이동할 수 없습니다.",
+
     "menucards.command.permission_denied": "이 명령어를 사용할 권한이 없습니다.",
     "menucards.command.spawn.set": "스폰 위치를 설정했습니다.",
     "menucards.command.spawn.cleared": "스폰 위치를 초기화했습니다.",
