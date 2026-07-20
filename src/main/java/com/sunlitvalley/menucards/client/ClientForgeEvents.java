@@ -4,6 +4,7 @@ import com.sunlitvalley.menucards.MenuCardsMod;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -19,5 +20,10 @@ public class ClientForgeEvents {
         while (ClientModEvents.KEY_OPEN_MENU.consumeClick()) {
             mc.setScreen(new MenuScreen());
         }
+    }
+
+    @SubscribeEvent
+    public static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+        ClientBalanceState.clear();
     }
 }

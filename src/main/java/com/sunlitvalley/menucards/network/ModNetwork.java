@@ -6,7 +6,7 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class ModNetwork {
-    private static final String PROTOCOL_VERSION = "1";
+    private static final String PROTOCOL_VERSION = "2";
     public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
         .named(ResourceLocation.fromNamespaceAndPath(MenuCardsMod.MOD_ID, "main"))
         .networkProtocolVersion(() -> PROTOCOL_VERSION)
@@ -21,6 +21,11 @@ public class ModNetwork {
             .encoder(CardActionC2SPacket::encode)
             .decoder(CardActionC2SPacket::decode)
             .consumerMainThread(CardActionC2SPacket::handle)
+            .add();
+        CHANNEL.messageBuilder(BalanceSyncS2CPacket.class, packetId++)
+            .encoder(BalanceSyncS2CPacket::encode)
+            .decoder(BalanceSyncS2CPacket::decode)
+            .consumerMainThread(BalanceSyncS2CPacket::handle)
             .add();
     }
 

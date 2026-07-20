@@ -2,6 +2,7 @@ package com.sunlitvalley.menucards;
 
 import com.sunlitvalley.menucards.network.ModNetwork;
 import com.sunlitvalley.menucards.server.MenuCardsServerEvents;
+import com.sunlitvalley.menucards.server.BalanceSync;
 import com.sunlitvalley.menucards.server.TeleportCountdown;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -22,6 +23,7 @@ public class MenuCardsMod {
         MinecraftForge.EVENT_BUS.addListener(MenuCardsServerEvents::onPlayerClone);
         MinecraftForge.EVENT_BUS.addListener(MenuCardsServerEvents::onServerStopping);
         MinecraftForge.EVENT_BUS.addListener(TeleportCountdown::onPlayerTick);
+        MinecraftForge.EVENT_BUS.addListener(BalanceSync::onPlayerTick);
         modBus.addListener(this::commonSetup);
     }
 

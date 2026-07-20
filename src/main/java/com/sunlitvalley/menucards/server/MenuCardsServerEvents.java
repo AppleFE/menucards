@@ -71,6 +71,7 @@ public final class MenuCardsServerEvents {
     }
 
     private static void releasePlayer(ServerPlayer player) {
+        BalanceSync.clear(player);
         runCleanup("release virtual shipping menu for " + player.getUUID(),
                 () -> ShippingBinMenuIntegration.release(player));
         runCleanup("clear action throttles for " + player.getUUID(),
